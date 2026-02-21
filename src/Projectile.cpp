@@ -6,6 +6,14 @@ Projectile::Projectile(float x, float y, float dx, float dy, int color)
     _dx = dx;
     _dy = dy;
     _colorPair = color;
+    // Assign team based on color: 1=white (player), 2=red (enemy), 3=green (other)
+    if (color == 1) {
+        _team = Team::Player;
+    } else if (color == 2) {
+        _team = Team::Enemy;
+    } else {
+        _team = Team::Neutral;
+    }
 	setAsciiArt("   ", " | ", "   ");
 }
 

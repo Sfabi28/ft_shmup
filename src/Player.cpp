@@ -1,7 +1,7 @@
 #include "Player.hpp"
 #include "Game.hpp"
 
-Player::Player(float x, float y) : AGameEntity(x, y, '@'), _shootCooldown(0.5f), _shootTimer(0), _invincible(false), _moveUp(false), _moveDown(false), _moveLeft(false), _moveRight(false), _shooting(false) {
+Player::Player(float x, float y) : AGameEntity(x, y, '@', 3), _shootCooldown(0.5f), _shootTimer(0), _invincible(false), _moveUp(false), _moveDown(false), _moveLeft(false), _moveRight(false), _shooting(false) {
 	_width = 3;
 	_height = 3;
 	_colorPair = 3;
@@ -12,10 +12,12 @@ Player::~Player() {}
 
 void Player::update(float dt, Game &game)
 {
-	(void)game;
 	_shootTimer += dt;
 	if (_shooting && _shootTimer >= _shootCooldown)
 	{
+		float centerX = _x;
+		float centerY = _y + 1;
+		game.spawnProjectile(centerX, centerY - 2, 0, -30, 1);
 		_shootTimer = 0;
 	}
 

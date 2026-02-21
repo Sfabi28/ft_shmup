@@ -27,6 +27,7 @@ class Game
 		int getScore() const;
 		void addScore(int points);
 		void resetScore();
+		void spawnProjectile(float x, float y, float dx, float dy, int color = 1);
 
 	private:
 		int _score;
@@ -42,6 +43,5 @@ class Game
 		void updateEntities(float dt);
 		void renderEntities(WINDOW *frame);
 		void spawnEnemy(float x, float y);
-		void spawnProjectile(float x, float y, float dx, float dy);
 		void checkCollisions();
 };

@@ -33,13 +33,14 @@ void Game::spawnEnemy(float x, float y)
     _enemies.push_back(std::make_unique<AEnemy>(x, y, 'V', 1));
 }
 
-void Game::spawnProjectile(float x, float y, float dx, float dy)
+void Game::spawnProjectile(float x, float y, float dx, float dy, int color)
 {
-    _projectiles.push_back(std::make_unique<Projectile>(x, y, dx, dy, 1));
+    _projectiles.push_back(std::make_unique<Projectile>(x, y, dx, dy, color));
 }
 
 void Game::checkCollisions()
 {
+    // Check player projectiles vs enemies
     for (auto &proj : _projectiles) {
         if (!proj || !proj->getIsAlive()) continue;
         
@@ -64,6 +65,59 @@ void Game::checkCollisions()
                 enemy->takeDamage(1);
                 proj->takeDamage(1);
                 addScore(10);
+            }
+        }
+    }
+
+    // Check enemy projectiles vs player
+    if (_player && _player->getIsAlive()) {
+        Hitbox playerHitbox = {
+            static_cast<int>(_player->getX()),
+            static_cast<int>(_player->getY()),
+            _player->getWidth(),
+            _player->getHeight()
+        };
+        
+        for (auto &proj : _projectiles) {
+            if (!proj || !proj->getIsAlive()) continue;
+            if (proj->getTeam() != Team::Enemy) continue;
+            
+            Hitbox projHitbox = {
+                static_cast<int>(proj->getX()),
+                static_cast<int>(proj->getY()),
+                proj->getWidth(),
+                proj->getHeight()
+            };
+            
+            if (collides(projHitbox, playerHitbox)) {
+                _player->takeDamage(1);
+                proj->takeDamage(1);
+            }
+        }
+    }
+
+    // Check enemies vs player
+    if (_player && _player->getIsAlive()) {
+        Hitbox playerHitbox = {
+            static_cast<int>(_player->getX()),
+            static_cast<int>(_player->getY()),
+            _player->getWidth(),
+            _player->getHeight()
+        };
+        
+        for (auto &enemy : _enemies) {
+            if (!enemy || !enemy->getIsAlive()) continue;
+            
+            Hitbox enemyHitbox = {
+                static_cast<int>(enemy->getX()),
+                static_cast<int>(enemy->getY()),
+                enemy->getWidth(),
+                enemy->getHeight()
+            };
+            
+            if (collides(playerHitbox, enemyHitbox)) {
+                _player->takeDamage(1);
+                enemy->takeDamage(1);
             }
         }
     }
@@ -132,10 +186,7 @@ void Game::endless(int answer)
         else if (answer == KEY_DOWN) _player->setDirection(1, true);
         else if (answer == KEY_LEFT) _player->setDirection(2, true);
         else if (answer == KEY_RIGHT) _player->setDirection(3, true);
-        else if (answer == 'u') {
-            spawnProjectile(_player->getX() + 1, _player->getY() - 1, 0, -30);
-            spawnProjectile(_player->getX() + 1, _player->getY() - 1, 0, -30);
-        }
+        else if (answer == ' ') _player->setShooting(true);
     }
 }
 
@@ -211,8 +262,12 @@ void Game::game_loop(int mode)
             }
             
             updateEntities(frame_delta);
-            checkCollisions();
-        }
+            checkCollisions();            
+            // Check if player is dead
+            if (_player && !_player->getIsAlive()) {
+                delwin(frame);
+                return;
+            }        }
 
         werase(frame);
         draw_frame(frame);

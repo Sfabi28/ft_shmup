@@ -31,6 +31,7 @@ float AGameEntity::getDy() const { return _dy; }
 float AGameEntity::getSpeed() const { return _speed; }
 int AGameEntity::getHP() const { return _hp; }
 bool AGameEntity::getIsAlive() const { return _isAlive; }
+Team AGameEntity::getTeam() const { return _team; }
 char AGameEntity::getSymbol() const { return _symbol; }
 int AGameEntity::getColorPair() const { return _colorPair; }
 int AGameEntity::getWidth() const { return _width; }
