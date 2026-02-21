@@ -1,11 +1,12 @@
 #include "game.hpp"
 
-# include <iostream>
-# include <string>
-# include <iomanip>
-# include <unistd.h>
+#include <iostream>
+#include <string>
+#include <iomanip>
+#include <unistd.h>
 
-void start_ncurses(void) {
+void start_ncurses(void)
+{
     initscr();
     cbreak();
     noecho();
@@ -13,7 +14,8 @@ void start_ncurses(void) {
     curs_set(0);
 }
 
-int menu() {
+int menu()
+{
     timeout(100);
 
     mvprintw(1, 0, "Welcome on ft_shmup!");
@@ -23,7 +25,8 @@ int menu() {
     mvprintw(7, 0, "3) World 3");
     mvprintw(8, 0, "4) Endless");
 
-    while (true) {
+    while (true)
+    {
         int answer = getch();
         if (answer == 27)
             return (-1);
@@ -38,11 +41,13 @@ int menu() {
     }
 }
 
-int main () {
+int main()
+{
     start_ncurses();
-    // sleep(5);
+
     int mode = menu();
-    if (mode == -1) {
+    if (mode == -1)
+    {
         endwin();
         return (0);
     }
