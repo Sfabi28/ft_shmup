@@ -20,9 +20,13 @@ class Player : public AGameEntity {
 		~Player();
 
 		void update(float dt, Game &game) override;
+		void render(WINDOW *win) const override;
+
+		void die(Game &game);
 
 		float getShootCooldown() const;
 		float getShootTimer() const;
+		int   getLives() const;
 		bool getIsInvincible() const;
 
 		void setDirection(int direction, bool pressed);
