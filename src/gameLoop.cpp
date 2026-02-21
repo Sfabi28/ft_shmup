@@ -10,7 +10,7 @@ bool handle_resize()
     while (LINES < MIN_LINES || COLS < MIN_COLS)
     {
         clear();
-        mvprintw(LINES / 2, (COLS - 42) / 2, "Window too small (should be at least 150x50)");
+        mvprintw(LINES / 2, (COLS - 42) / 2, "Window too small (should be at least 120x40)");
         refresh();
         int answer = getch();
         if (answer == 27)
@@ -60,7 +60,7 @@ void game_loop(int mode)
             frame = newwin(MIN_LINES, MIN_COLS, STARTING_Y, STARTING_X);
         }
 
-        draw_frame(frame);
+        draw_frame(frame, ); //TODO passare lo user e cambiare la funzione per estrarre score e vite
 
         auto end = std::chrono::steady_clock::now();
         auto elapsed = end - start;
