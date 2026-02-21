@@ -8,7 +8,7 @@ VALGRIND = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes 
 SRCS_DIR = ./src/
 HEADERS_DIR = ./include/
 
-SRCS =	$(addprefix $(SRCS_DIR), main.cpp gameLoop.cpp)
+SRCS =	$(addprefix $(SRCS_DIR), main.cpp gameLoop.cpp draw.cpp)
 HEADERS = $(addprefix $(HEADERS_DIR), game.hpp)
 
 all: $(NAME)

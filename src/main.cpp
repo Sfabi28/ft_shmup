@@ -3,7 +3,6 @@
 # include <iostream>
 # include <string>
 # include <iomanip>
-# include <ncurses.h>
 # include <unistd.h>
 
 void start_ncurses(void) {
