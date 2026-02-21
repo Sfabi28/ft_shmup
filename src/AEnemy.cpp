@@ -2,11 +2,11 @@
 #include "Game.hpp"
 
 AEnemy::AEnemy(float x, float y, char sym, int hp) 
-    : AGameEntity(x, y, sym, hp, 1.0f, 3, 3) {
+    : AGameEntity(x, y, sym, hp, 3.0f, 3, 3) {
     _dx = 0;
     _dy = _speed;
     _colorPair = 2;
-	setAsciiArt("m m", "\\_/", " V ");
+	setAsciiArt("w w", "\\_/", " V ");
 }
 
 AEnemy::~AEnemy() {}

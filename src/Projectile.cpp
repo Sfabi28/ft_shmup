@@ -6,7 +6,7 @@ Projectile::Projectile(float x, float y, float dx, float dy, int color)
     _dx = dx;
     _dy = dy;
     _colorPair = color;
-	setAsciiArt(" * ", "***", " * ");
+	setAsciiArt("   ", " | ", "   ");
 }
 
 Projectile::~Projectile() {}

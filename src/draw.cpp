@@ -10,6 +10,4 @@ void Game::draw_frame(WINDOW *frame)
     std::string score_str = "score: " + std::to_string(getScore());
 
     ascii_art(frame, -1, 2, score_str, 0, false);
-
-    wrefresh(frame);
 }

@@ -2,6 +2,8 @@
 
 Game::Game() noexcept : _score(0) {}
 
+Game::~Game() {}
+
 int Game::getWidth() const {
     return MIN_COLS;
 }

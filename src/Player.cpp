@@ -5,6 +5,7 @@ Player::Player(float x, float y) : AGameEntity(x, y, '@'), _shootCooldown(0.5f),
 	_width = 3;
 	_height = 3;
 	_colorPair = 3;
+	_speed = 25.0f;
 	setAsciiArt(" A ", "/_\\", "m m");
 }
 Player::~Player() {}
@@ -27,8 +28,18 @@ void Player::update(float dt, Game &game)
 	setDx(moveX * getSpeed());
 	setDy(moveY * getSpeed());
 
-	setX(getX() + getDx() * dt);
-	setY(getY() + getDy() * dt);
+	float newX = getX() + getDx() * dt;
+	float newY = getY() + getDy() * dt;
+	
+	const int MIN_X = 2;
+	const int MAX_X = game.getWidth() - 5;
+	const int MIN_Y = 7;
+	const int MAX_Y = game.getHeight() - 4;
+	
+	if (newX >= MIN_X && newX <= MAX_X)
+		setX(newX);
+	if (newY >= MIN_Y && newY <= MAX_Y)
+		setY(newY);
 }
 
 float Player::getShootCooldown() const { return _shootCooldown; }

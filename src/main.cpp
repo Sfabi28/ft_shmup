@@ -12,6 +12,10 @@ void start_ncurses(void)
     noecho();
     keypad(stdscr, TRUE);
     curs_set(0);
+    start_color();
+    init_pair(1, COLOR_WHITE, COLOR_BLACK);
+    init_pair(2, COLOR_RED, COLOR_BLACK);
+    init_pair(3, COLOR_GREEN, COLOR_BLACK);
 }
 
 int menu()
