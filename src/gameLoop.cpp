@@ -1,10 +1,10 @@
-#include "game.hpp"
+#include "Game.hpp"
 #include <iostream>
 #include <chrono>
 #include <thread>
 #include <ncurses.h>
 
-bool handle_resize()
+bool Game::handle_resize()
 {
     nodelay(stdscr, FALSE);
     while (LINES < MIN_LINES || COLS < MIN_COLS)
@@ -22,9 +22,11 @@ bool handle_resize()
     return (false);
 }
 
-void game_loop(int mode)
+void Game::game_loop(int mode)
 {
     (void)mode;
+
+    resetScore();
 
     if (handle_resize())
         return;
@@ -60,7 +62,7 @@ void game_loop(int mode)
             frame = newwin(MIN_LINES, MIN_COLS, STARTING_Y, STARTING_X);
         }
 
-        draw_frame(frame, ); //TODO passare lo user e cambiare la funzione per estrarre score e vite
+        draw_frame(frame);
 
         auto end = std::chrono::steady_clock::now();
         auto elapsed = end - start;

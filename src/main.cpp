@@ -1,4 +1,4 @@
-#include "game.hpp"
+#include "Game.hpp"
 
 #include <iostream>
 #include <string>
@@ -52,6 +52,7 @@ int main()
         return (0);
     }
     clear();
-    game_loop(mode);
+    Game game;
+    game.game_loop(mode);
     endwin();
 }

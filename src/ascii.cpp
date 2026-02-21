@@ -1,4 +1,4 @@
-#include "game.hpp"
+#include "Game.hpp"
 #include <string>
 #include <ncurses.h>
 
@@ -47,7 +47,7 @@ static const char *g_points[3] = {
     " o ",
     " o "};
 
-void ascii_art(WINDOW *win, int y, int x, const std::string &text, int area_width, bool center)
+void Game::ascii_art(WINDOW *win, int y, int x, const std::string &text, int area_width, bool center)
 {
     int spacing = 1;
     int total_width = 0;
