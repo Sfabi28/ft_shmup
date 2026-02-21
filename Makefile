@@ -8,15 +8,14 @@ VALGRIND = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes 
 SRCS_DIR = ./src/
 HEADERS_DIR = ./include/
 
-SRCS =	main.cpp \
-		$(addprefix $(SRCS_DIR), main.cpp )
-HEADERS = $(addprefix $(HEADERS_DIR), )
+SRCS =	$(addprefix $(SRCS_DIR), main.cpp gameLoop.cpp)
+HEADERS = $(addprefix $(HEADERS_DIR), game.hpp)
 
 all: $(NAME)
 
 $(NAME): $(SRCS) $(HEADERS)
 	@echo "Compiling executable..."
-	@$(CXX) $(CXXFLAGS) $(NCURSES) $(SRCS) -I$(HEADERS_DIR) -o $(NAME)
+	@$(CXX) $(CXXFLAGS) $(SRCS) -I$(HEADERS_DIR) -o $(NAME) $(NCURSES)
 
 clean:
 	@echo "Nothing to clean..."
