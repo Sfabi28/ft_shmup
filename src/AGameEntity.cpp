@@ -1,7 +1,7 @@
 #include "AGameEntity.hpp"
 #include <ncurses.h>
 
-AGameEntity::AGameEntity(float x, float y, char sym, int hp, int speed, int width, int height) : _x(x), _y(y), _hp(hp), _symbol(sym), _isAlive(true), _speed(speed), _width(width), _height(height) {}
+AGameEntity::AGameEntity(float x, float y, char sym, int hp, float speed, int width, int height) : _x(x), _y(y), _hp(hp), _symbol(sym), _isAlive(true), _speed(speed), _width(width), _height(height) {}
 AGameEntity::~AGameEntity() {}
 
 void AGameEntity::takeDamage(int dmg)
@@ -11,14 +11,12 @@ void AGameEntity::takeDamage(int dmg)
 		_isAlive = false;
 }
 
-void AGameEntity::render() const {
-    attron(COLOR_PAIR(_colorPair));
-    for (int i = 0; i < _height; i++) {
-        for (int j = 0; j < _width; j++) {
-            mvaddch(static_cast<int>(_y) + i, static_cast<int>(_x) + j, _symbol);
-        }
-    }
-    attroff(COLOR_PAIR(_colorPair));
+void AGameEntity::render(WINDOW *win) const {
+    wattron(win, COLOR_PAIR(_colorPair));
+    for (int i = 0; i < _height; i++)
+        for (int j = 0; j < _width; j++)
+            mvwaddch(win, static_cast<int>(_y) + i, static_cast<int>(_x) + j, _symbol);
+    wattroff(win, COLOR_PAIR(_colorPair));
 }
 
 float AGameEntity::getX() const { return _x; }

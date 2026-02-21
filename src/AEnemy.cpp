@@ -2,9 +2,9 @@
 #include "Game.hpp"
 
 AEnemy::AEnemy(float x, float y, char sym, int hp) 
-    : AGameEntity(x, y, sym, hp, 1, 1, 1) {
+    : AGameEntity(x, y, sym, hp, 1.0f, 1, 1) {
     _dx = 0;
-    _dy = speed;
+    _dy = _speed;
     _colorPair = 2;
 }
 

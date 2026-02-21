@@ -12,8 +12,6 @@ void Player::update(float dt, Game &game)
 		//TODO: creare un proiettile
 	}
 
-
-
 	// Movimento
 	float moveX = 0, moveY = 0;
 	if (_moveUp) moveY -= 1;
@@ -25,8 +23,8 @@ void Player::update(float dt, Game &game)
 	setDy(moveY * getSpeed());
 
 	// Aggiorna posizione
-	setX(getX() + getDx());
-	setY(getY() + getDy());
+	setX(getX() + getDx() * dt);
+	setY(getY() + getDy() * dt);
 }
 
 float Player::getShootCooldown() const { return _shootCooldown; }

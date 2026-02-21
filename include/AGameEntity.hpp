@@ -1,16 +1,25 @@
-#ifndef AGAMEENTITY_HPP
-#define AGAMEENTITY_HPP
+#pragma once
+
+#include <ncurses.h>
+#include "Hitbox.hpp"
 
 class Game;
+
+enum class Team {
+    Player,
+    Enemy,
+    Neutral
+};
 
 class AGameEntity {
 	protected:
 		float _x, _y;
 		float _dx, _dy;
-		int _speed;
+		float _speed;
 
 		int _hp;
 		bool _isAlive;
+		Team _team;
 
 		char _symbol;
 		int _colorPair;
@@ -18,12 +27,13 @@ class AGameEntity {
 		int _height;
 
 	public:
-		AGameEntity(float x, float y, char sym, int hp = 1, int speed = 1, int width = 1, int height = 1);
+		AGameEntity(float x, float y, char sym, int hp = 1, float speed = 1.f,
+                int width = 1, int height = 1, Team team = Team::Neutral);
 		virtual ~AGameEntity();
 
 		void takeDamage(int dmg);
 		virtual void update(float dt, Game &game) = 0;
-		virtual void render() const;
+		virtual void render(WINDOW *win	) const;
 
 		float getX() const;
 		float getY() const;
@@ -32,6 +42,7 @@ class AGameEntity {
 		float getSpeed() const;
 		int getHP() const;
 		bool getIsAlive() const;
+		Team getTeam() const;
 		char getSymbol() const;
 		int getColorPair() const;
 		int getWidth() const;
@@ -42,5 +53,3 @@ class AGameEntity {
 		void setDx(float dx);
 		void setDy(float dy);
 };
-
-#endif

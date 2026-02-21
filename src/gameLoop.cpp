@@ -29,10 +29,10 @@ void game_loop(int mode) {
     int STARTING_Y = (LINES - MIN_LINES) / 2;
 
     WINDOW *frame = newwin(MIN_LINES, MIN_COLS, STARTING_Y, STARTING_X);
+    nodelay(stdscr, TRUE);
 
     draw_frame(frame);
 
-    nodelay(stdscr, TRUE);
     while (true) {
         auto start = std::chrono::steady_clock::now();
         int answer = getch();

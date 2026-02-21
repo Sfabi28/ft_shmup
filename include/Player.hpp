@@ -1,5 +1,4 @@
-#ifndef PLAYER_HPP
-#define PLAYER_HPP
+#pragma once
 
 #include "AGameEntity.hpp"
 
@@ -32,4 +31,3 @@ class Player : public AGameEntity {
 		void resetInput();
 };
 
-#endif
