@@ -1,0 +1,18 @@
+{
+   ignore_libncurses_leaks
+   Memcheck:Leak
+   ...
+   obj:*/libncurses.so*
+}
+{
+   ignore_libncurses_leaks_mac_linux_variants
+   Memcheck:Leak
+   ...
+   obj:*/libncurses*
+}
+{
+   ignore_libtinfo
+   Memcheck:Leak
+   ...
+   obj:*/libtinfo*
+}

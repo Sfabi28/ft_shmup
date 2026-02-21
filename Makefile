@@ -1,6 +1,7 @@
 NAME = ft_shmup
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++17
+NCURSES = -lncurses
 
 VALGRIND = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes --log-file=log_valgrind.txt
 
@@ -15,7 +16,7 @@ all: $(NAME)
 
 $(NAME): $(SRCS) $(HEADERS)
 	@echo "Compiling executable..."
-	@$(CXX) $(CXXFLAGS) $(SRCS) -I$(HEADERS_DIR) -o $(NAME)
+	@$(CXX) $(CXXFLAGS) $(NCURSES) $(SRCS) -I$(HEADERS_DIR) -o $(NAME)
 
 clean:
 	@echo "Nothing to clean..."
