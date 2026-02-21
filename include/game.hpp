@@ -2,8 +2,8 @@
 
 # include <ncurses.h>
 
-constexpr int MIN_LINES = 50;
-constexpr int MIN_COLS = 150;
+constexpr int MIN_LINES = 40;
+constexpr int MIN_COLS = 100;
 
 
 void game_loop(int mode);
