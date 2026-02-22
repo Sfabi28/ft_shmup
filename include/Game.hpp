@@ -9,6 +9,7 @@
 # include "AEnemy.hpp"
 # include "Projectile.hpp"
 # include "Asteroid.hpp"
+# include "Boss.hpp"
 
 class Game
 {
@@ -28,20 +29,24 @@ class Game
 		int getScore() const;
 		void addScore(int points);
 		void resetScore();
-		void spawnProjectile(float x, float y, float dx, float dy, int color = 1);
+		void spawnProjectile(float x, float y, float dx, float dy, int color = 1, Team team = Team::Neutral);
 
 	private:
 		int _score;
+		int _endlessElapsedSeconds;
+		int _world1CurrentWave;
+		int _world1TotalWaves;
 		std::unique_ptr<Player> _player;
+		std::unique_ptr<Boss> _boss;
 		std::vector<std::unique_ptr<AEnemy>> _enemies;
 		std::vector<std::unique_ptr<Projectile>> _projectiles;
 		std::vector<std::unique_ptr<Asteroid>> _asteroids;
 		
 		bool handle_resize();
-		void endless(int answer);
-		void world1(int answer);
-		void world2(int answer);
-		void world3(int answer);
+		bool endless(int answer, float frameDelta);
+		bool world1(int answer, float frameDelta);
+		bool world2(int answer, float frameDelta);
+		bool world3(int answer, float frameDelta);
 		void updateEntities(float dt);
 		void renderEntities(WINDOW *frame);
 		void spawnEnemy(float x, float y);

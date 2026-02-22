@@ -1,19 +1,12 @@
 #include "Projectile.hpp"
 #include "Game.hpp"
 
-Projectile::Projectile(float x, float y, float dx, float dy, int color) 
+Projectile::Projectile(float x, float y, float dx, float dy, int color, Team team) 
     : AGameEntity(x, y, '|', 1, 1, 1, 1) {
     _dx = dx;
     _dy = dy;
     _colorPair = color;
-    // Assign team based on color: 1=white (neutral), 2=red (enemy), 3=green (player)
-    if (color == 3) {
-        _team = Team::Player;
-    } else if (color == 2) {
-        _team = Team::Enemy;
-    } else {
-        _team = Team::Neutral;
-    }
+    _team = team;
 }
 
 Projectile::~Projectile() {}

@@ -19,7 +19,7 @@ void Player::update(float dt, Game &game)
 	{
 		float centerX = _x + 1;
 		float centerY = _y +1 ;
-		game.spawnProjectile(centerX, centerY - 2, 0, -30, 3);
+		game.spawnProjectile(centerX, centerY - 2, 0, -30, 3, Team::Player);
 		_shootTimer = 0;
 	}
 
