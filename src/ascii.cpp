@@ -52,15 +52,7 @@ void Game::ascii_art(WINDOW *win, int y, int x, const std::string &text, int are
     int spacing = 1;
     int total_width = 0;
 
-    if (total_width > 0)
-        total_width -= spacing;
-
     int start_x = x;
-
-    if (center)
-        start_x = x + (area_width / 2) - (total_width / 2);
-
-    int start_y = y + 2;
 
     for (char c : text)
     {
@@ -79,7 +71,12 @@ void Game::ascii_art(WINDOW *win, int y, int x, const std::string &text, int are
     }
 
     if (total_width > 0)
-        total_width -= spacing;
+		total_width -= spacing;
+
+	if (center)
+		start_x = x + (area_width / 2) - (total_width / 2);
+
+    int start_y = y + 2;
 
     for (int row = 0; row < 3; row++)
     {

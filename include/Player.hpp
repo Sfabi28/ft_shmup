@@ -8,6 +8,7 @@ class Player : public AGameEntity {
 		float _shootTimer;
 
 		bool  _invincible;
+		float _invincibilityTimer;
 
 		bool _moveUp;
 		bool _moveDown;
@@ -21,6 +22,8 @@ class Player : public AGameEntity {
 
 		void update(float dt, Game &game) override;
 		void render(WINDOW *win) const override;
+
+		void takeDamage(int dmg) override;
 
 		void die(Game &game);
 

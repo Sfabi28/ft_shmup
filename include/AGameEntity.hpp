@@ -33,7 +33,7 @@ class AGameEntity {
                 int width = 1, int height = 1, Team team = Team::Neutral);
 		virtual ~AGameEntity();
 
-		void takeDamage(int dmg);
+		virtual void takeDamage(int dmg);
 		virtual void update(float dt, Game &game) = 0;
 		virtual void render(WINDOW *win	) const;
 

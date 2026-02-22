@@ -16,11 +16,25 @@ void AGameEntity::takeDamage(int dmg)
 
 void AGameEntity::render(WINDOW *win) const {
     wattron(win, COLOR_PAIR(_colorPair));
-    for (int i = 0; i < 3; i++) {
-        if (i < static_cast<int>(_asciiArt[i].length())) {
-            mvwprintw(win, static_cast<int>(_y) + i, static_cast<int>(_x), "%s", _asciiArt[i].c_str());
+	if (_width == 1 && _height == 1) {
+		int drawY = static_cast<int>(_y);
+        int drawX = static_cast<int>(_x);
+		
+        if (drawY >= 1 && drawY < getmaxy(win) - 1 && 
+            drawX >= 1 && drawX < getmaxx(win) - 1) {
+            mvwaddch(win, drawY, drawX, _symbol);
         }
-    }
+	}
+	else {
+		for (int i = 0; i < 3; i++) {
+			int drawY = static_cast<int>(_y) + i;
+			int drawX = static_cast<int>(_x);
+			if (drawY >= 1 && drawY < getmaxy(win) - 1 && 
+				drawX >= 1 && drawX + (int)_asciiArt[i].length() < getmaxx(win)) {
+				mvwprintw(win, drawY, drawX, "%s", _asciiArt[i].c_str());
+			}
+		}
+	}
     wattroff(win, COLOR_PAIR(_colorPair));
 }
 

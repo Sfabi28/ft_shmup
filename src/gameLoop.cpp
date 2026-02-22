@@ -38,87 +38,46 @@ void Game::spawnProjectile(float x, float y, float dx, float dy, int color)
     _projectiles.push_back(std::make_unique<Projectile>(x, y, dx, dy, color));
 }
 
-void Game::checkCollisions()
-{
-    // Check player projectiles vs enemies
+void Game::checkCollisions() {
+    if (!_player || !_player->getIsAlive()) return;
+
+    Hitbox playerBox = { _player->getX(), _player->getY(), static_cast<float>(_player->getWidth()), static_cast<float>(_player->getHeight()) };
+
+    // CONTROLLO PROIETTILI
     for (auto &proj : _projectiles) {
-        if (!proj || !proj->getIsAlive()) continue;
-        
-        Hitbox projHitbox = {
-            static_cast<int>(proj->getX()),
-            static_cast<int>(proj->getY()),
-            proj->getWidth(),
-            proj->getHeight()
-        };
-        
-        for (auto &enemy : _enemies) {
-            if (!enemy || !enemy->getIsAlive()) continue;
-            
-            Hitbox enemyHitbox = {
-                static_cast<int>(enemy->getX()),
-                static_cast<int>(enemy->getY()),
-                enemy->getWidth(),
-                enemy->getHeight()
-            };
-            
-            if (collides(projHitbox, enemyHitbox)) {
-                enemy->takeDamage(1);
-                proj->takeDamage(1);
-                addScore(10);
-            }
-        }
-    }
+        if (!proj->getIsAlive()) continue;
+        Hitbox pBox = { proj->getX(), proj->getY(), static_cast<float>(proj->getWidth()), static_cast<float>(proj->getHeight()) };
 
-    // Check enemy projectiles vs player
-    if (_player && _player->getIsAlive()) {
-        Hitbox playerHitbox = {
-            static_cast<int>(_player->getX()),
-            static_cast<int>(_player->getY()),
-            _player->getWidth(),
-            _player->getHeight()
-        };
-        
-        for (auto &proj : _projectiles) {
-            if (!proj || !proj->getIsAlive()) continue;
-            if (proj->getTeam() != Team::Enemy) continue;
-            
-            Hitbox projHitbox = {
-                static_cast<int>(proj->getX()),
-                static_cast<int>(proj->getY()),
-                proj->getWidth(),
-                proj->getHeight()
-            };
-            
-            if (collides(projHitbox, playerHitbox)) {
+        if (proj->getTeam() == Team::Enemy) {
+            if (collides(pBox, playerBox)) {
                 _player->takeDamage(1);
                 proj->takeDamage(1);
             }
         }
+
+        else if (proj->getTeam() == Team::Player) {
+            for (auto &enemy : _enemies) {
+                if (!enemy->getIsAlive()) continue;
+                Hitbox eBox = { enemy->getX(), enemy->getY(), static_cast<float>(enemy->getWidth()), static_cast<float>(enemy->getHeight()) };
+                
+                if (collides(pBox, eBox)) {
+                    enemy->takeDamage(1);
+                    proj->takeDamage(1);
+                    if (!enemy->getIsAlive()) addScore(enemy->getScoreValue());
+                    break;
+                }
+            }
+        }
     }
 
-    // Check enemies vs player
-    if (_player && _player->getIsAlive()) {
-        Hitbox playerHitbox = {
-            static_cast<int>(_player->getX()),
-            static_cast<int>(_player->getY()),
-            _player->getWidth(),
-            _player->getHeight()
-        };
-        
-        for (auto &enemy : _enemies) {
-            if (!enemy || !enemy->getIsAlive()) continue;
-            
-            Hitbox enemyHitbox = {
-                static_cast<int>(enemy->getX()),
-                static_cast<int>(enemy->getY()),
-                enemy->getWidth(),
-                enemy->getHeight()
-            };
-            
-            if (collides(playerHitbox, enemyHitbox)) {
-                _player->takeDamage(1);
-                enemy->takeDamage(1);
-            }
+    // CONTROLLO NEMICI vs PLAYER (Scontro fisico)
+    for (auto &enemy : _enemies) {
+        if (!enemy->getIsAlive()) continue;
+        Hitbox eBox = { enemy->getX(), enemy->getY(), static_cast<float>(enemy->getWidth()), static_cast<float>(enemy->getHeight()) };
+
+        if (collides(playerBox, eBox)) {
+            _player->takeDamage(1);
+            enemy->takeDamage(1);
         }
     }
 }

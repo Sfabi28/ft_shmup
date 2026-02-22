@@ -12,4 +12,6 @@ class AEnemy : public AGameEntity {
 		virtual ~AEnemy();
 
 		virtual void update(float dt, class Game &game);
+
+		int getScoreValue() const;
 };
