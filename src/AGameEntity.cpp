@@ -20,7 +20,8 @@ void AGameEntity::render(WINDOW *win) const {
 		int drawY = static_cast<int>(_y);
         int drawX = static_cast<int>(_x);
 		
-        if (drawY >= 1 && drawY < getmaxy(win) - 1 && 
+        if (drawY > 5 &&
+            drawY < getmaxy(win) - 1 && 
             drawX >= 1 && drawX < getmaxx(win) - 1) {
             mvwaddch(win, drawY, drawX, _symbol);
         }

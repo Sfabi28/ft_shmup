@@ -23,3 +23,8 @@ void Game::addScore(int points) {
 void Game::resetScore() {
     _score = 0;
 }
+
+void Game::spawnAsteroid(float x, float y)
+{
+    _asteroids.push_back(std::make_unique<Asteroid>(x, y, 3));
+}

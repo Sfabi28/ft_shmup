@@ -2,7 +2,7 @@
 #include "Game.hpp"
 
 AEnemy::AEnemy(float x, float y, char sym, int hp) 
-    : AGameEntity(x, y, sym, hp, 3.0f, 3, 3, Team::Enemy) {
+    : AGameEntity(x, y, sym, hp, 3.5f, 3, 3, Team::Enemy) {
     _dx = 0;
     _dy = _speed;
     _colorPair = 2;

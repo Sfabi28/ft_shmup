@@ -41,43 +41,100 @@ void Game::spawnProjectile(float x, float y, float dx, float dy, int color)
 void Game::checkCollisions() {
     if (!_player || !_player->getIsAlive()) return;
 
-    Hitbox playerBox = { _player->getX(), _player->getY(), static_cast<float>(_player->getWidth()), static_cast<float>(_player->getHeight()) };
+    Hitbox playerBox = { _player->getX(), _player->getY(), 
+                         static_cast<float>(_player->getWidth()), 
+                         static_cast<float>(_player->getHeight()) };
 
-    // CONTROLLO PROIETTILI
+    // PROIETTILI vs TUTTO
     for (auto &proj : _projectiles) {
         if (!proj->getIsAlive()) continue;
-        Hitbox pBox = { proj->getX(), proj->getY(), static_cast<float>(proj->getWidth()), static_cast<float>(proj->getHeight()) };
+        Hitbox pBox = { proj->getX(), proj->getY(), 
+                        static_cast<float>(proj->getWidth()), 
+                        static_cast<float>(proj->getHeight()) };
 
-        if (proj->getTeam() == Team::Enemy) {
-            if (collides(pBox, playerBox)) {
-                _player->takeDamage(1);
+        // Proiettili vs Player
+        if (proj->getTeam() != Team::Player && collides(pBox, playerBox)) {
+            _player->takeDamage(1);
+            proj->takeDamage(1);
+            continue;
+        }
+
+        // Proiettili vs Nemici
+        for (auto &enemy : _enemies) {
+            if (!enemy->getIsAlive()) continue;
+            if (proj->getTeam() == enemy->getTeam()) continue; // Stesso team, salta
+            
+            Hitbox eBox = { enemy->getX(), enemy->getY(), 
+                           static_cast<float>(enemy->getWidth()), 
+                           static_cast<float>(enemy->getHeight()) };
+            
+            if (collides(pBox, eBox)) {
+                enemy->takeDamage(1);
                 proj->takeDamage(1);
+                if (!enemy->getIsAlive()) addScore(enemy->getScoreValue());
+                break;
             }
         }
 
-        else if (proj->getTeam() == Team::Player) {
-            for (auto &enemy : _enemies) {
-                if (!enemy->getIsAlive()) continue;
-                Hitbox eBox = { enemy->getX(), enemy->getY(), static_cast<float>(enemy->getWidth()), static_cast<float>(enemy->getHeight()) };
-                
-                if (collides(pBox, eBox)) {
-                    enemy->takeDamage(1);
-                    proj->takeDamage(1);
-                    if (!enemy->getIsAlive()) addScore(enemy->getScoreValue());
-                    break;
-                }
+        // Proiettili vs Asteroidi (Neutral danneggia tutti)
+        for (auto &asteroid : _asteroids) {
+            if (!asteroid->getIsAlive()) continue;
+            Hitbox aBox = { asteroid->getX(), asteroid->getY(),
+                           static_cast<float>(asteroid->getWidth()),
+                           static_cast<float>(asteroid->getHeight()) };
+            
+            if (collides(pBox, aBox)) {
+                asteroid->takeDamage(1);
+                proj->takeDamage(1);
+                if (!asteroid->getIsAlive()) addScore(asteroid->getScoreValue());
+                break;
             }
         }
     }
 
-    // CONTROLLO NEMICI vs PLAYER (Scontro fisico)
+    // ENTITÀ vs PLAYER
     for (auto &enemy : _enemies) {
         if (!enemy->getIsAlive()) continue;
-        Hitbox eBox = { enemy->getX(), enemy->getY(), static_cast<float>(enemy->getWidth()), static_cast<float>(enemy->getHeight()) };
+        Hitbox eBox = { enemy->getX(), enemy->getY(), 
+                       static_cast<float>(enemy->getWidth()), 
+                       static_cast<float>(enemy->getHeight()) };
 
         if (collides(playerBox, eBox)) {
             _player->takeDamage(1);
             enemy->takeDamage(1);
+        }
+    }
+    
+    for (auto &asteroid : _asteroids) {
+        if (!asteroid->getIsAlive()) continue;
+        Hitbox aBox = { asteroid->getX(), asteroid->getY(),
+                       static_cast<float>(asteroid->getWidth()),
+                       static_cast<float>(asteroid->getHeight()) };
+
+        if (collides(playerBox, aBox)) {
+            _player->takeDamage(1);
+            asteroid->takeDamage(1);
+        }
+    }
+    
+    // NEMICI vs ASTEROIDI
+    for (auto &enemy : _enemies) {
+        if (!enemy->getIsAlive()) continue;
+        Hitbox eBox = { enemy->getX(), enemy->getY(),
+                       static_cast<float>(enemy->getWidth()),
+                       static_cast<float>(enemy->getHeight()) };
+        
+        for (auto &asteroid : _asteroids) {
+            if (!asteroid->getIsAlive()) continue;
+            Hitbox aBox = { asteroid->getX(), asteroid->getY(),
+                           static_cast<float>(asteroid->getWidth()),
+                           static_cast<float>(asteroid->getHeight()) };
+            
+            if (collides(eBox, aBox)) {
+                enemy->takeDamage(1);
+                asteroid->takeDamage(1);
+                break;
+            }
         }
     }
 }
@@ -87,13 +144,20 @@ void Game::updateEntities(float dt)
     if (_player)
         _player->update(dt, *this);
 
-    for (auto &enemy : _enemies)
+    for (auto &enemy : _enemies) {
         if (enemy)
             enemy->update(dt, *this);
+    }
 
-    for (auto &proj : _projectiles)
+    for (auto &proj : _projectiles) {
         if (proj)
             proj->update(dt, *this);
+    }
+
+    for (auto &asteroid : _asteroids) {
+        if (asteroid)
+            asteroid->update(dt, *this);
+    }
 
     for (auto it = _enemies.begin(); it != _enemies.end();) {
         if (*it && !(*it)->getIsAlive()) {
@@ -110,6 +174,14 @@ void Game::updateEntities(float dt)
             ++it;
         }
     }
+
+	for (auto it = _asteroids.begin(); it != _asteroids.end();) {
+        if (*it && !(*it)->getIsAlive()) {
+            it = _asteroids.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void Game::renderEntities(WINDOW *frame)
@@ -117,18 +189,29 @@ void Game::renderEntities(WINDOW *frame)
     if (_player)
         _player->render(frame);
 
-    for (auto &enemy : _enemies)
+    for (auto &enemy : _enemies) {
         if (enemy)
             enemy->render(frame);
+	}
 
-    for (auto &proj : _projectiles)
-        if (proj)
-            proj->render(frame);
+    for (auto &proj : _projectiles) {
+		if (proj)
+			proj->render(frame);
+	}
+	
+	for (auto &asteroid : _asteroids)
+	{
+        if (asteroid)
+            asteroid->render(frame);
+	}
 }
 
 void Game::endless(int answer)
 {
     static bool initialized = false;
+	static auto last_asteroid_spawn = std::chrono::steady_clock::now();
+    const float ASTEROID_SPAWN_INTERVAL = 5.0f;
+	
 
     if (!initialized) {
         _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
@@ -146,6 +229,13 @@ void Game::endless(int answer)
         else if (answer == KEY_LEFT) _player->setDirection(2, true);
         else if (answer == KEY_RIGHT) _player->setDirection(3, true);
         else if (answer == ' ') _player->setShooting(true);
+    }
+
+	auto now = std::chrono::steady_clock::now();
+    auto elapsed_asteroid = std::chrono::duration<float>(now - last_asteroid_spawn).count();
+    if (elapsed_asteroid >= ASTEROID_SPAWN_INTERVAL) {
+        spawnAsteroid(rand() % (MIN_COLS - 6) + 3, TOP_ROW + 1);
+        last_asteroid_spawn = now;
     }
 }
 

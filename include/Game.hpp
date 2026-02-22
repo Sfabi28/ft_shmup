@@ -8,6 +8,7 @@
 # include "Player.hpp"
 # include "AEnemy.hpp"
 # include "Projectile.hpp"
+# include "Asteroid.hpp"
 
 class Game
 {
@@ -34,6 +35,7 @@ class Game
 		std::unique_ptr<Player> _player;
 		std::vector<std::unique_ptr<AEnemy>> _enemies;
 		std::vector<std::unique_ptr<Projectile>> _projectiles;
+		std::vector<std::unique_ptr<Asteroid>> _asteroids;
 		
 		bool handle_resize();
 		void endless(int answer);
@@ -44,4 +46,5 @@ class Game
 		void renderEntities(WINDOW *frame);
 		void spawnEnemy(float x, float y);
 		void checkCollisions();
+		void spawnAsteroid(float x, float y);
 };
