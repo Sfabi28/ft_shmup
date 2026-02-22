@@ -947,7 +947,6 @@ void Game::game_loop(int mode, int players)
     int STARTING_X = (COLS - MIN_COLS) / 2;
     int STARTING_Y = (LINES - MIN_LINES) / 2;
     WINDOW *frame = newwin(MIN_LINES, MIN_COLS, STARTING_Y, STARTING_X);
-
     nodelay(stdscr, TRUE);
 
     auto last_frame = std::chrono::steady_clock::now();
