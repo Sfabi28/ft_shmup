@@ -500,6 +500,7 @@ bool Game::world1(const std::vector<int>& inputs, float frameDelta)
 
         if (spawnedInWave >= waveSize && _enemies.empty() && _projectiles.empty()) {
             currentWave++;
+            _player->setHp(_player->getHP() + 1);
             spawnedInWave = 0;
             last_spawn = now;
             if (currentWave < WAVE_COUNT)
@@ -642,6 +643,7 @@ bool Game::world2(const std::vector<int>& inputs, float frameDelta)
 
         if (spawnedInWave >= waveSize && _enemies.empty() && _projectiles.empty()) {
             currentWave++;
+            _player->setHp(_player->getHP() + 1);
             spawnedInWave = 0;
             last_spawn = now;
             if (currentWave < WAVE_COUNT)
@@ -784,6 +786,7 @@ bool Game::world3(const std::vector<int>& inputs, float frameDelta)
 
         if (spawnedInWave >= waveSize && _enemies.empty() && _projectiles.empty()) {
             currentWave++;
+            _player->setHp(_player->getHP() + 1);
             spawnedInWave = 0;
             last_spawn = now;
             if (currentWave < WAVE_COUNT)

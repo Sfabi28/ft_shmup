@@ -57,6 +57,7 @@ void AGameEntity::setX(float x) { _x = x; }
 void AGameEntity::setY(float y) { _y = y; }
 void AGameEntity::setDx(float dx) { _dx = dx; }
 void AGameEntity::setDy(float dy) { _dy = dy; }
+void AGameEntity::setHp(int num) {_hp = num;}
 
 void AGameEntity::setAsciiArt(const std::string &line0, const std::string &line1, const std::string &line2, const std::string &line3, const std::string &line4, const std::string &line5, const std::string &line6) {
 	_asciiArt[0] = line0;

@@ -54,5 +54,6 @@ class AGameEntity {
 		void setY(float y);
 		void setDx(float dx);
 		void setDy(float dy);
+		void setHp(int num);
 		void setAsciiArt(const std::string &line0, const std::string &line1, const std::string &line2, const std::string &line3 = "", const std::string &line4 = "", const std::string &line5 = "", const std::string &line6 = "");
 };
