@@ -13,6 +13,12 @@
 
 class Game
 {
+	private:
+		struct Star {
+			float x;
+			float y;
+			char symbol;
+		};
 	public:
 		static constexpr int MIN_LINES = 40;
 		static constexpr int MIN_COLS = 120;
@@ -43,6 +49,7 @@ class Game
 		std::vector<std::unique_ptr<AEnemy>> _enemies;
 		std::vector<std::unique_ptr<Projectile>> _projectiles;
 		std::vector<std::unique_ptr<Asteroid>> _asteroids;
+		std::vector<Star> _backgroundStars;
 		
 		bool handle_resize();
 		bool endless(const std::vector<int>& inputs, float frameDelta);
@@ -54,4 +61,7 @@ class Game
 		void spawnEnemy(float x, float y);
 		void checkCollisions();
 		void spawnAsteroid(float x, float y);
+		void initializeBackground();
+		void drawBackground(WINDOW *frame);
+		void updateBackground(float dt);
 };

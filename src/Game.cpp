@@ -5,7 +5,10 @@ Game::Game() noexcept
             _endlessElapsedSeconds(-1),
             _world1CurrentWave(-1),
             _world1TotalWaves(0),
-            _playerCount(1) {}
+            _playerCount(1)
+{
+	initializeBackground();
+}
 
 Game::~Game() {}
 
@@ -32,4 +35,54 @@ void Game::resetScore() {
 void Game::spawnAsteroid(float x, float y)
 {
     _asteroids.push_back(std::make_unique<Asteroid>(x, y, 3));
+}
+
+void Game::initializeBackground() {
+    _backgroundStars.clear();
+    
+    srand(time(nullptr));
+    for (int i = 0; i < 35; i++) {
+        Star star;
+        star.x = static_cast<float>(rand() % (MIN_COLS - 4) + 2);
+        star.y = static_cast<float>(rand() % (MIN_LINES - TOP_ROW - 2) + TOP_ROW + 1);
+        
+        int type = rand() % 3;
+        if (type == 0) star.symbol = '.';
+        else if (type == 1) star.symbol = '*';
+        else star.symbol = '+';
+        
+        _backgroundStars.push_back(star);
+    }
+}
+
+void Game::updateBackground(float dt) {
+    for (auto &star : _backgroundStars) {
+        star.y += 3.0f * dt;
+        
+        if (star.y >= MIN_LINES - 1) {
+            star.y = TOP_ROW + 1;
+            star.x = static_cast<float>(rand() % (MIN_COLS - 4) + 2);
+            
+            int type = rand() % 3;
+            if (type == 0) star.symbol = '.';
+            else if (type == 1) star.symbol = '*';
+            else star.symbol = '+';
+        }
+    }
+}
+
+void Game::drawBackground(WINDOW *frame) {
+    wattron(frame, COLOR_PAIR(4) | A_DIM);
+    
+    for (const auto &star : _backgroundStars) {
+        int drawY = static_cast<int>(star.y);
+        int drawX = static_cast<int>(star.x);
+        
+        if (drawY > TOP_ROW && drawY < MIN_LINES - 1 && 
+            drawX > 0 && drawX < MIN_COLS - 1) {
+            mvwaddch(frame, drawY, drawX, star.symbol);
+        }
+    }
+    
+    wattroff(frame, COLOR_PAIR(4) | A_DIM);
 }
