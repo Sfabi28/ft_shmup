@@ -1,6 +1,11 @@
 #include "Game.hpp"
 
-Game::Game() noexcept : _score(0), _endlessElapsedSeconds(-1), _world1CurrentWave(-1), _world1TotalWaves(0) {}
+Game::Game() noexcept
+        : _score(0),
+            _endlessElapsedSeconds(-1),
+            _world1CurrentWave(-1),
+            _world1TotalWaves(0),
+            _playerCount(1) {}
 
 Game::~Game() {}
 

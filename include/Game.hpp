@@ -20,7 +20,7 @@ class Game
 
 		Game() noexcept;
 		~Game();
-		void game_loop(int mode);
+		void game_loop(int mode, int players);
 		void draw_frame(WINDOW *frame);
 		void ascii_art(WINDOW *win, int y, int x, const std::string &text, int area_width, bool center);
 
@@ -36,17 +36,19 @@ class Game
 		int _endlessElapsedSeconds;
 		int _world1CurrentWave;
 		int _world1TotalWaves;
+		int _playerCount;
 		std::unique_ptr<Player> _player;
+		std::unique_ptr<Player> _player2;
 		std::unique_ptr<Boss> _boss;
 		std::vector<std::unique_ptr<AEnemy>> _enemies;
 		std::vector<std::unique_ptr<Projectile>> _projectiles;
 		std::vector<std::unique_ptr<Asteroid>> _asteroids;
 		
 		bool handle_resize();
-		bool endless(int answer, float frameDelta);
-		bool world1(int answer, float frameDelta);
-		bool world2(int answer, float frameDelta);
-		bool world3(int answer, float frameDelta);
+		bool endless(const std::vector<int>& inputs, float frameDelta);
+		bool world1(const std::vector<int>& inputs, float frameDelta);
+		bool world2(const std::vector<int>& inputs, float frameDelta);
+		bool world3(const std::vector<int>& inputs, float frameDelta);
 		void updateEntities(float dt);
 		void renderEntities(WINDOW *frame);
 		void spawnEnemy(float x, float y);

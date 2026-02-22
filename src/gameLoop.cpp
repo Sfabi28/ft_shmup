@@ -49,30 +49,46 @@ void Game::spawnProjectile(float x, float y, float dx, float dy, int color, Team
 }
 
 void Game::checkCollisions() {
-    if (!_player || !_player->getIsAlive()) return;
+    bool p1Alive = _player && _player->getIsAlive();
+    bool p2Alive = _player2 && _player2->getIsAlive();
+    if (!p1Alive && !p2Alive) return;
 
-    Hitbox playerBox = { _player->getX(), _player->getY(), static_cast<float>(_player->getWidth()), static_cast<float>(_player->getHeight()) };
+    Hitbox playerBox = {0, 0, 0, 0};
+    Hitbox player2Box = {0, 0, 0, 0};
+    if (p1Alive) {
+        playerBox = { _player->getX(), _player->getY(), static_cast<float>(_player->getWidth()), static_cast<float>(_player->getHeight()) };
+    }
+    if (p2Alive) {
+        player2Box = { _player2->getX(), _player2->getY(), static_cast<float>(_player2->getWidth()), static_cast<float>(_player2->getHeight()) };
+    }
 
     for (auto &proj : _projectiles) {
         if (!proj->getIsAlive()) continue;
         Hitbox pBox = { proj->getX(), proj->getY(), static_cast<float>(proj->getWidth()), static_cast<float>(proj->getHeight()) };
 
         if (proj->getTeam() == Team::Enemy) {
-            if (collides(pBox, playerBox)) {
+            bool hitPlayer = false;
+            if (p1Alive && collides(pBox, playerBox)) {
                 _player->takeDamage(1);
+                hitPlayer = true;
+            } else if (p2Alive && collides(pBox, player2Box)) {
+                _player->takeDamage(1);
+                hitPlayer = true;
+            }
+            if (hitPlayer) {
                 proj->takeDamage(1);
             }
         }
 
         else if (proj->getTeam() == Team::Player) {
-            // Check against boss first
+            
             if (_boss) {
                 Hitbox bossBox = { _boss->getX(), _boss->getY(), static_cast<float>(_boss->getWidth()), static_cast<float>(_boss->getHeight()) };
                 if (collides(pBox, bossBox)) {
                     _boss->takeDamage(1);
                     proj->takeDamage(1);
-                    if (_boss->getHP() <= 0) addScore(500);  // Boss bonus points
-                    return;  // Don't check enemies after hitting boss
+                    if (_boss->getHP() <= 0) addScore(500);  
+                    return;  
                 }
             }
             
@@ -94,16 +110,23 @@ void Game::checkCollisions() {
         if (!enemy->getIsAlive()) continue;
         Hitbox eBox = { enemy->getX(), enemy->getY(), static_cast<float>(enemy->getWidth()), static_cast<float>(enemy->getHeight()) };
 
-        if (collides(playerBox, eBox)) {
+        if (p1Alive && collides(playerBox, eBox)) {
+            _player->takeDamage(1);
+            enemy->takeDamage(1);
+        }
+        if (p2Alive && collides(player2Box, eBox)) {
             _player->takeDamage(1);
             enemy->takeDamage(1);
         }
     }
     
-    // Boss collision with player
+    
     if (_boss) {
         Hitbox bossBox = { _boss->getX(), _boss->getY(), static_cast<float>(_boss->getWidth()), static_cast<float>(_boss->getHeight()) };
-        if (collides(playerBox, bossBox)) {
+        if (p1Alive && collides(playerBox, bossBox)) {
+            _player->takeDamage(1);
+        }
+        if (p2Alive && collides(player2Box, bossBox)) {
             _player->takeDamage(1);
         }
     }
@@ -113,6 +136,8 @@ void Game::updateEntities(float dt)
 {
     if (_player)
         _player->update(dt, *this);
+    if (_player2)
+        _player2->update(dt, *this);
 
     for (auto &enemy : _enemies) {
         if (!enemy)
@@ -153,6 +178,8 @@ void Game::renderEntities(WINDOW *frame)
 {
     if (_player)
         _player->render(frame);
+    if (_player2)
+        _player2->render(frame);
 
     for (auto &enemy : _enemies)
         if (enemy)
@@ -166,7 +193,7 @@ void Game::renderEntities(WINDOW *frame)
             proj->render(frame);
 }
 
-bool Game::endless(int answer, float frameDelta)
+bool Game::endless(const std::vector<int>& inputs, float frameDelta)
 {
     static bool initialized = false;
     static auto last_spawn = std::chrono::steady_clock::now();
@@ -174,9 +201,19 @@ bool Game::endless(int answer, float frameDelta)
     static constexpr float SPAWN_INTERVAL = 3.5f;
 
     if (!initialized) {
-        _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+        if (_playerCount == 2) {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 6, 30);
+            _player2 = std::make_unique<Player>(MIN_COLS / 2 + 4, 30);
+        } else {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+            _player2 = nullptr;
+        }
         _player->setDx(0);
         _player->setDy(0);
+        if (_player2) {
+            _player2->setDx(0);
+            _player2->setDy(0);
+        }
         srand(time(nullptr));
         last_spawn = std::chrono::steady_clock::now();
         endless_start = std::chrono::steady_clock::now();
@@ -186,14 +223,57 @@ bool Game::endless(int answer, float frameDelta)
         initialized = true;
     }
 
+    // Reset shooting sempre
     if (_player) {
-        _player->resetInput();
-        
-        if (answer == KEY_UP) _player->setDirection(0, true);
-        else if (answer == KEY_DOWN) _player->setDirection(1, true);
-        else if (answer == KEY_LEFT) _player->setDirection(2, true);
-        else if (answer == KEY_RIGHT) _player->setDirection(3, true);
-        else if (answer == ' ') _player->setShooting(true);
+        _player->setShooting(false);
+    }
+    if (_player2) {
+        _player2->setShooting(false);
+    }
+
+    // Determina quali tasti di movimento sono stati premuti in questo frame
+    bool p1_up = false, p1_down = false, p1_left = false, p1_right = false;
+    bool p2_up = false, p2_down = false, p2_left = false, p2_right = false;
+    
+    for (int answer : inputs) {
+        if (answer == 'w' || answer == 'W') p1_up = true;
+        else if (answer == 's' || answer == 'S') p1_down = true;
+        else if (answer == 'a' || answer == 'A') p1_left = true;
+        else if (answer == 'd' || answer == 'D') p1_right = true;
+        else if (answer == KEY_UP) p2_up = true;
+        else if (answer == KEY_DOWN) p2_down = true;
+        else if (answer == KEY_LEFT) p2_left = true;
+        else if (answer == KEY_RIGHT) p2_right = true;
+        else if (answer == ' ') { if (_player) _player->setShooting(true); }
+        else if (answer == '\n') { if (_player2) _player2->setShooting(true); }
+    }
+    
+    // Applica reset solo ai tasti che NON sono stati premuti
+    if (_player) {
+        if (!p1_up) _player->setDirection(0, false);
+        if (!p1_down) _player->setDirection(1, false);
+        if (!p1_left) _player->setDirection(2, false);
+        if (!p1_right) _player->setDirection(3, false);
+    }
+    if (_player2) {
+        if (!p2_up) _player2->setDirection(0, false);
+        if (!p2_down) _player2->setDirection(1, false);
+        if (!p2_left) _player2->setDirection(2, false);
+        if (!p2_right) _player2->setDirection(3, false);
+    }
+    
+    // Applica gli input positivi
+    if (_player) {
+        if (p1_up) _player->setDirection(0, true);
+        if (p1_down) _player->setDirection(1, true);
+        if (p1_left) _player->setDirection(2, true);
+        if (p1_right) _player->setDirection(3, true);
+    }
+    if (_player2) {
+        if (p2_up) _player2->setDirection(0, true);
+        if (p2_down) _player2->setDirection(1, true);
+        if (p2_left) _player2->setDirection(2, true);
+        if (p2_right) _player2->setDirection(3, true);
     }
 
     _endlessElapsedSeconds = static_cast<int>(
@@ -212,12 +292,18 @@ bool Game::endless(int answer, float frameDelta)
     updateEntities(frameDelta);
     checkCollisions();
 
-    if (_player && !_player->getIsAlive())
+    // Sincronizza lo stato di morte tra i due giocatori (condividono stessa salute)
+    if (_player && !_player->getIsAlive() && _player2) {
+        _player2->takeDamage(_player2->getLives());
+    }
+
+    bool anyAlive = (_player && _player->getIsAlive()) || (_player2 && _player2->getIsAlive());
+    if (!anyAlive)
         return true;
     return false;
 }
 
-bool Game::world1(int answer, float frameDelta)
+bool Game::world1(const std::vector<int>& inputs, float frameDelta)
 {
     static bool initialized = false;
     static bool bossPhase = false;
@@ -252,9 +338,19 @@ bool Game::world1(int answer, float frameDelta)
     static auto boss_last_shoot = std::chrono::steady_clock::now();
 
     if (!initialized) {
-        _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+        if (_playerCount == 2) {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 6, 30);
+            _player2 = std::make_unique<Player>(MIN_COLS / 2 + 4, 30);
+        } else {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+            _player2 = nullptr;
+        }
         _player->setDx(0);
         _player->setDy(0);
+        if (_player2) {
+            _player2->setDx(0);
+            _player2->setDy(0);
+        }
         _enemies.clear();
         _projectiles.clear();
         _boss = nullptr;
@@ -270,14 +366,57 @@ bool Game::world1(int answer, float frameDelta)
         initialized = true;
     }
 
+    // Reset shooting sempre
     if (_player) {
-        _player->resetInput();
+        _player->setShooting(false);
+    }
+    if (_player2) {
+        _player2->setShooting(false);
+    }
 
-        if (answer == KEY_UP) _player->setDirection(0, true);
-        else if (answer == KEY_DOWN) _player->setDirection(1, true);
-        else if (answer == KEY_LEFT) _player->setDirection(2, true);
-        else if (answer == KEY_RIGHT) _player->setDirection(3, true);
-        else if (answer == ' ') _player->setShooting(true);
+    // Determina quali tasti di movimento sono stati premuti in questo frame
+    bool p1_up = false, p1_down = false, p1_left = false, p1_right = false;
+    bool p2_up = false, p2_down = false, p2_left = false, p2_right = false;
+    
+    for (int answer : inputs) {
+        if (answer == 'w' || answer == 'W') p1_up = true;
+        else if (answer == 's' || answer == 'S') p1_down = true;
+        else if (answer == 'a' || answer == 'A') p1_left = true;
+        else if (answer == 'd' || answer == 'D') p1_right = true;
+        else if (answer == KEY_UP) p2_up = true;
+        else if (answer == KEY_DOWN) p2_down = true;
+        else if (answer == KEY_LEFT) p2_left = true;
+        else if (answer == KEY_RIGHT) p2_right = true;
+        else if (answer == ' ') { if (_player) _player->setShooting(true); }
+        else if (answer == '\n') { if (_player2) _player2->setShooting(true); }
+    }
+    
+    // Applica reset solo ai tasti che NON sono stati premuti
+    if (_player) {
+        if (!p1_up) _player->setDirection(0, false);
+        if (!p1_down) _player->setDirection(1, false);
+        if (!p1_left) _player->setDirection(2, false);
+        if (!p1_right) _player->setDirection(3, false);
+    }
+    if (_player2) {
+        if (!p2_up) _player2->setDirection(0, false);
+        if (!p2_down) _player2->setDirection(1, false);
+        if (!p2_left) _player2->setDirection(2, false);
+        if (!p2_right) _player2->setDirection(3, false);
+    }
+    
+    // Applica gli input positivi
+    if (_player) {
+        if (p1_up) _player->setDirection(0, true);
+        if (p1_down) _player->setDirection(1, true);
+        if (p1_left) _player->setDirection(2, true);
+        if (p1_right) _player->setDirection(3, true);
+    }
+    if (_player2) {
+        if (p2_up) _player2->setDirection(0, true);
+        if (p2_down) _player2->setDirection(1, true);
+        if (p2_left) _player2->setDirection(2, true);
+        if (p2_right) _player2->setDirection(3, true);
     }
 
     auto now = std::chrono::steady_clock::now();
@@ -331,25 +470,25 @@ bool Game::world1(int answer, float frameDelta)
         }
     }
     
-    // Boss phase
+    
     if (currentWave >= WAVE_COUNT && !bossPhase && _enemies.empty()) {
-        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 10);  // 10 HP for World 1
+        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 10);  
         bossPhase = true;
-        _world1CurrentWave = WAVE_COUNT + 1;  // Indicate boss phase
+        _world1CurrentWave = WAVE_COUNT + 1;  
         boss_last_shoot = std::chrono::steady_clock::now();
     }
     
     if (bossPhase && _boss) {
         _boss->update(frameDelta, *this);
         
-        // Boss shoots every 1.2s
+        
         auto boss_shoot_elapsed = std::chrono::duration<float>(now - boss_last_shoot).count();
         if (boss_shoot_elapsed >= 1.2f) {
             spawnProjectile(_boss->getShootX(), _boss->getShootY(), 0.0f, 20.0f, 2, Team::Enemy);
             boss_last_shoot = now;
         }
         
-        // Remove boss if HP <= 0
+        
         if (_boss->getHP() <= 0) {
             _boss = nullptr;
             bossDefeated = true;
@@ -359,7 +498,13 @@ bool Game::world1(int answer, float frameDelta)
     updateEntities(frameDelta);
     checkCollisions();
 
-    if (_player && !_player->getIsAlive())
+    // Sincronizza lo stato di morte tra i due giocatori (condividono stessa salute)
+    if (_player && !_player->getIsAlive() && _player2) {
+        _player2->takeDamage(_player2->getLives());
+    }
+
+    bool anyAlive = (_player && _player->getIsAlive()) || (_player2 && _player2->getIsAlive());
+    if (!anyAlive)
         return true;
 
     if (bossDefeated && _boss == nullptr && _projectiles.empty())
@@ -368,7 +513,7 @@ bool Game::world1(int answer, float frameDelta)
     return false;
 }
 
-bool Game::world2(int answer, float frameDelta)
+bool Game::world2(const std::vector<int>& inputs, float frameDelta)
 {
     static bool initialized = false;
     static bool bossPhase = false;
@@ -403,9 +548,19 @@ bool Game::world2(int answer, float frameDelta)
     static auto boss_last_shoot = std::chrono::steady_clock::now();
 
     if (!initialized) {
-        _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+        if (_playerCount == 2) {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 6, 30);
+            _player2 = std::make_unique<Player>(MIN_COLS / 2 + 4, 30);
+        } else {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+            _player2 = nullptr;
+        }
         _player->setDx(0);
         _player->setDy(0);
+        if (_player2) {
+            _player2->setDx(0);
+            _player2->setDy(0);
+        }
         _enemies.clear();
         _projectiles.clear();
         _boss = nullptr;
@@ -421,14 +576,57 @@ bool Game::world2(int answer, float frameDelta)
         initialized = true;
     }
 
+    // Reset shooting sempre
     if (_player) {
-        _player->resetInput();
+        _player->setShooting(false);
+    }
+    if (_player2) {
+        _player2->setShooting(false);
+    }
 
-        if (answer == KEY_UP) _player->setDirection(0, true);
-        else if (answer == KEY_DOWN) _player->setDirection(1, true);
-        else if (answer == KEY_LEFT) _player->setDirection(2, true);
-        else if (answer == KEY_RIGHT) _player->setDirection(3, true);
-        else if (answer == ' ') _player->setShooting(true);
+    // Determina quali tasti di movimento sono stati premuti in questo frame
+    bool p1_up = false, p1_down = false, p1_left = false, p1_right = false;
+    bool p2_up = false, p2_down = false, p2_left = false, p2_right = false;
+    
+    for (int answer : inputs) {
+        if (answer == 'w' || answer == 'W') p1_up = true;
+        else if (answer == 's' || answer == 'S') p1_down = true;
+        else if (answer == 'a' || answer == 'A') p1_left = true;
+        else if (answer == 'd' || answer == 'D') p1_right = true;
+        else if (answer == KEY_UP) p2_up = true;
+        else if (answer == KEY_DOWN) p2_down = true;
+        else if (answer == KEY_LEFT) p2_left = true;
+        else if (answer == KEY_RIGHT) p2_right = true;
+        else if (answer == ' ') { if (_player) _player->setShooting(true); }
+        else if (answer == '\n') { if (_player2) _player2->setShooting(true); }
+    }
+    
+    // Applica reset solo ai tasti che NON sono stati premuti
+    if (_player) {
+        if (!p1_up) _player->setDirection(0, false);
+        if (!p1_down) _player->setDirection(1, false);
+        if (!p1_left) _player->setDirection(2, false);
+        if (!p1_right) _player->setDirection(3, false);
+    }
+    if (_player2) {
+        if (!p2_up) _player2->setDirection(0, false);
+        if (!p2_down) _player2->setDirection(1, false);
+        if (!p2_left) _player2->setDirection(2, false);
+        if (!p2_right) _player2->setDirection(3, false);
+    }
+    
+    // Applica gli input positivi
+    if (_player) {
+        if (p1_up) _player->setDirection(0, true);
+        if (p1_down) _player->setDirection(1, true);
+        if (p1_left) _player->setDirection(2, true);
+        if (p1_right) _player->setDirection(3, true);
+    }
+    if (_player2) {
+        if (p2_up) _player2->setDirection(0, true);
+        if (p2_down) _player2->setDirection(1, true);
+        if (p2_left) _player2->setDirection(2, true);
+        if (p2_right) _player2->setDirection(3, true);
     }
 
     auto now = std::chrono::steady_clock::now();
@@ -482,9 +680,9 @@ bool Game::world2(int answer, float frameDelta)
         }
     }
     
-    // Boss phase
+    
     if (currentWave >= WAVE_COUNT && !bossPhase && _enemies.empty()) {
-        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 20);  // 20 HP for World 2
+        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 20);  
         bossPhase = true;
         _world1CurrentWave = WAVE_COUNT + 1;
         boss_last_shoot = std::chrono::steady_clock::now();
@@ -493,14 +691,14 @@ bool Game::world2(int answer, float frameDelta)
     if (bossPhase && _boss) {
         _boss->update(frameDelta, *this);
         
-        // Boss shoots every 1.2s
+        
         auto boss_shoot_elapsed = std::chrono::duration<float>(now - boss_last_shoot).count();
         if (boss_shoot_elapsed >= 1.2f) {
             spawnProjectile(_boss->getShootX(), _boss->getShootY(), 0.0f, 20.0f, 2, Team::Enemy);
             boss_last_shoot = now;
         }
         
-        // Remove boss if HP <= 0
+        
         if (_boss->getHP() <= 0) {
             _boss = nullptr;
             bossDefeated = true;
@@ -510,7 +708,13 @@ bool Game::world2(int answer, float frameDelta)
     updateEntities(frameDelta);
     checkCollisions();
 
-    if (_player && !_player->getIsAlive())
+    // Sincronizza lo stato di morte tra i due giocatori (condividono stessa salute)
+    if (_player && !_player->getIsAlive() && _player2) {
+        _player2->takeDamage(_player2->getLives());
+    }
+
+    bool anyAlive = (_player && _player->getIsAlive()) || (_player2 && _player2->getIsAlive());
+    if (!anyAlive)
         return true;
 
     if (bossDefeated && _boss == nullptr && _projectiles.empty())
@@ -519,7 +723,7 @@ bool Game::world2(int answer, float frameDelta)
     return false;
 }
 
-bool Game::world3(int answer, float frameDelta)
+bool Game::world3(const std::vector<int>& inputs, float frameDelta)
 {
     static bool initialized = false;
     static bool bossPhase = false;
@@ -554,9 +758,19 @@ bool Game::world3(int answer, float frameDelta)
     static auto boss_last_shoot = std::chrono::steady_clock::now();
 
     if (!initialized) {
-        _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+        if (_playerCount == 2) {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 6, 30);
+            _player2 = std::make_unique<Player>(MIN_COLS / 2 + 4, 30);
+        } else {
+            _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
+            _player2 = nullptr;
+        }
         _player->setDx(0);
         _player->setDy(0);
+        if (_player2) {
+            _player2->setDx(0);
+            _player2->setDy(0);
+        }
         _enemies.clear();
         _projectiles.clear();
         _boss = nullptr;
@@ -572,14 +786,57 @@ bool Game::world3(int answer, float frameDelta)
         initialized = true;
     }
 
+    // Reset shooting sempre
     if (_player) {
-        _player->resetInput();
+        _player->setShooting(false);
+    }
+    if (_player2) {
+        _player2->setShooting(false);
+    }
 
-        if (answer == KEY_UP) _player->setDirection(0, true);
-        else if (answer == KEY_DOWN) _player->setDirection(1, true);
-        else if (answer == KEY_LEFT) _player->setDirection(2, true);
-        else if (answer == KEY_RIGHT) _player->setDirection(3, true);
-        else if (answer == ' ') _player->setShooting(true);
+    // Determina quali tasti di movimento sono stati premuti in questo frame
+    bool p1_up = false, p1_down = false, p1_left = false, p1_right = false;
+    bool p2_up = false, p2_down = false, p2_left = false, p2_right = false;
+    
+    for (int answer : inputs) {
+        if (answer == 'w' || answer == 'W') p1_up = true;
+        else if (answer == 's' || answer == 'S') p1_down = true;
+        else if (answer == 'a' || answer == 'A') p1_left = true;
+        else if (answer == 'd' || answer == 'D') p1_right = true;
+        else if (answer == KEY_UP) p2_up = true;
+        else if (answer == KEY_DOWN) p2_down = true;
+        else if (answer == KEY_LEFT) p2_left = true;
+        else if (answer == KEY_RIGHT) p2_right = true;
+        else if (answer == ' ') { if (_player) _player->setShooting(true); }
+        else if (answer == '\n') { if (_player2) _player2->setShooting(true); }
+    }
+    
+    // Applica reset solo ai tasti che NON sono stati premuti
+    if (_player) {
+        if (!p1_up) _player->setDirection(0, false);
+        if (!p1_down) _player->setDirection(1, false);
+        if (!p1_left) _player->setDirection(2, false);
+        if (!p1_right) _player->setDirection(3, false);
+    }
+    if (_player2) {
+        if (!p2_up) _player2->setDirection(0, false);
+        if (!p2_down) _player2->setDirection(1, false);
+        if (!p2_left) _player2->setDirection(2, false);
+        if (!p2_right) _player2->setDirection(3, false);
+    }
+    
+    // Applica gli input positivi
+    if (_player) {
+        if (p1_up) _player->setDirection(0, true);
+        if (p1_down) _player->setDirection(1, true);
+        if (p1_left) _player->setDirection(2, true);
+        if (p1_right) _player->setDirection(3, true);
+    }
+    if (_player2) {
+        if (p2_up) _player2->setDirection(0, true);
+        if (p2_down) _player2->setDirection(1, true);
+        if (p2_left) _player2->setDirection(2, true);
+        if (p2_right) _player2->setDirection(3, true);
     }
 
     auto now = std::chrono::steady_clock::now();
@@ -633,9 +890,9 @@ bool Game::world3(int answer, float frameDelta)
         }
     }
     
-    // Boss phase
+    
     if (currentWave >= WAVE_COUNT && !bossPhase && _enemies.empty()) {
-        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 30);  // 30 HP for World 3
+        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 30);  
         bossPhase = true;
         _world1CurrentWave = WAVE_COUNT + 1;
         boss_last_shoot = std::chrono::steady_clock::now();
@@ -644,14 +901,14 @@ bool Game::world3(int answer, float frameDelta)
     if (bossPhase && _boss) {
         _boss->update(frameDelta, *this);
         
-        // Boss shoots every 1.2s
+        
         auto boss_shoot_elapsed = std::chrono::duration<float>(now - boss_last_shoot).count();
         if (boss_shoot_elapsed >= 1.2f) {
             spawnProjectile(_boss->getShootX(), _boss->getShootY(), 0.0f, 20.0f, 2, Team::Enemy);
             boss_last_shoot = now;
         }
         
-        // Remove boss if HP <= 0
+        
         if (_boss->getHP() <= 0) {
             _boss = nullptr;
             bossDefeated = true;
@@ -661,7 +918,13 @@ bool Game::world3(int answer, float frameDelta)
     updateEntities(frameDelta);
     checkCollisions();
 
-    if (_player && !_player->getIsAlive())
+    // Sincronizza lo stato di morte tra i due giocatori (condividono stessa salute)
+    if (_player && !_player->getIsAlive() && _player2) {
+        _player2->takeDamage(_player2->getLives());
+    }
+
+    bool anyAlive = (_player && _player->getIsAlive()) || (_player2 && _player2->getIsAlive());
+    if (!anyAlive)
         return true;
 
     if (bossDefeated && _boss == nullptr && _projectiles.empty())
@@ -670,8 +933,9 @@ bool Game::world3(int answer, float frameDelta)
     return false;
 }
 
-void Game::game_loop(int mode)
+void Game::game_loop(int mode, int players)
 {
+    _playerCount = (players == 2) ? 2 : 1;
     resetScore();
     _endlessElapsedSeconds = -1;
     _world1CurrentWave = -1;
@@ -694,14 +958,28 @@ void Game::game_loop(int mode)
         auto frame_delta = std::chrono::duration<float>(frame_start - last_frame).count();
         last_frame = frame_start;
 
-        int answer = getch();
-        if (answer == 27)
+        // Leggi TUTTI gli input disponibili in questa frame
+        std::vector<int> inputs;
+        int answer;
+        while ((answer = getch()) != ERR) {
+            inputs.push_back(answer);
+        }
+
+        // Controlla tasti speciali
+        bool shouldExit = false;
+        bool shouldResize = false;
+        for (int key : inputs) {
+            if (key == 27) shouldExit = true;
+            if (key == KEY_RESIZE) shouldResize = true;
+        }
+
+        if (shouldExit)
         {
             delwin(frame);
             return;
         }
 
-        if (answer == KEY_RESIZE)
+        if (shouldResize)
         {
             delwin(frame);
             if (handle_resize())
@@ -715,22 +993,22 @@ void Game::game_loop(int mode)
         bool playerWon = false;
 
         if (mode == 1) {
-            gameEnded = world1(answer, frame_delta);
+            gameEnded = world1(inputs, frame_delta);
             if (gameEnded)
-                playerWon = (_player && _player->getIsAlive());
+                playerWon = (_player && _player->getIsAlive()) || (_player2 && _player2->getIsAlive());
         }
         else if (mode == 2) {
-            gameEnded = world2(answer, frame_delta);
+            gameEnded = world2(inputs, frame_delta);
             if (gameEnded)
-                playerWon = (_player && _player->getIsAlive());
+                playerWon = (_player && _player->getIsAlive()) || (_player2 && _player2->getIsAlive());
         }
         else if (mode == 3) {
-            gameEnded = world3(answer, frame_delta);
+            gameEnded = world3(inputs, frame_delta);
             if (gameEnded)
-                playerWon = (_player && _player->getIsAlive());
+                playerWon = (_player && _player->getIsAlive()) || (_player2 && _player2->getIsAlive());
         }
         else if (mode == 4) {
-            gameEnded = endless(answer, frame_delta);
+            gameEnded = endless(inputs, frame_delta);
             playerWon = false;
         }
 
