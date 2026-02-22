@@ -8,6 +8,7 @@
 # include "Player.hpp"
 # include "AEnemy.hpp"
 # include "Projectile.hpp"
+# include "Boss.hpp"
 
 class Game
 {
@@ -35,6 +36,7 @@ class Game
 		int _world1CurrentWave;
 		int _world1TotalWaves;
 		std::unique_ptr<Player> _player;
+		std::unique_ptr<Boss> _boss;
 		std::vector<std::unique_ptr<AEnemy>> _enemies;
 		std::vector<std::unique_ptr<Projectile>> _projectiles;
 		

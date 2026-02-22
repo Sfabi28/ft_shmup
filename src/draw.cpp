@@ -18,6 +18,10 @@ void Game::draw_frame(WINDOW *frame)
         std::string timer_str = minutes_str + ":" + seconds_str;
         ascii_art(frame, -1, MIN_COLS / 2 - 10, timer_str, 0, false);
     }
+    else if (_boss && _boss->getIsAlive()) {
+        std::string boss_hp_str = std::to_string(_boss->getHP()) + "/" + std::to_string(_boss->getMaxHP());
+        ascii_art(frame, -1, MIN_COLS / 2 - 10, boss_hp_str, 0, false);
+    }
     else if (_world1CurrentWave > 0 && _world1TotalWaves > 0) {
         std::string wave_str = std::to_string(_world1CurrentWave) + " /" + std::to_string(_world1TotalWaves);
         ascii_art(frame, -1, MIN_COLS / 2 - 10, wave_str, 0, false);

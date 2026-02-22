@@ -26,7 +26,7 @@ class AGameEntity {
 		int _colorPair;
 		int _width;
 		int _height;
-		std::string _asciiArt[3];
+		std::string _asciiArt[7];
 
 	public:
 		AGameEntity(float x, float y, char sym, int hp = 1, float speed = 1.f,
@@ -54,5 +54,5 @@ class AGameEntity {
 		void setY(float y);
 		void setDx(float dx);
 		void setDy(float dy);
-		void setAsciiArt(const std::string &line0, const std::string &line1, const std::string &line2);
+		void setAsciiArt(const std::string &line0, const std::string &line1, const std::string &line2, const std::string &line3 = "", const std::string &line4 = "", const std::string &line5 = "", const std::string &line6 = "");
 };

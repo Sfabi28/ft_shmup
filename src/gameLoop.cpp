@@ -12,6 +12,8 @@
 #include <cstdlib>
 #include <ctime>
 
+static constexpr float SPAWN_INTERVAL = 0.4f;
+
 bool Game::handle_resize()
 {
     nodelay(stdscr, FALSE);
@@ -63,6 +65,17 @@ void Game::checkCollisions() {
         }
 
         else if (proj->getTeam() == Team::Player) {
+            // Check against boss first
+            if (_boss) {
+                Hitbox bossBox = { _boss->getX(), _boss->getY(), static_cast<float>(_boss->getWidth()), static_cast<float>(_boss->getHeight()) };
+                if (collides(pBox, bossBox)) {
+                    _boss->takeDamage(1);
+                    proj->takeDamage(1);
+                    if (_boss->getHP() <= 0) addScore(500);  // Boss bonus points
+                    return;  // Don't check enemies after hitting boss
+                }
+            }
+            
             for (auto &enemy : _enemies) {
                 if (!enemy->getIsAlive()) continue;
                 Hitbox eBox = { enemy->getX(), enemy->getY(), static_cast<float>(enemy->getWidth()), static_cast<float>(enemy->getHeight()) };
@@ -84,6 +97,14 @@ void Game::checkCollisions() {
         if (collides(playerBox, eBox)) {
             _player->takeDamage(1);
             enemy->takeDamage(1);
+        }
+    }
+    
+    // Boss collision with player
+    if (_boss) {
+        Hitbox bossBox = { _boss->getX(), _boss->getY(), static_cast<float>(_boss->getWidth()), static_cast<float>(_boss->getHeight()) };
+        if (collides(playerBox, bossBox)) {
+            _player->takeDamage(1);
         }
     }
 }
@@ -136,6 +157,9 @@ void Game::renderEntities(WINDOW *frame)
     for (auto &enemy : _enemies)
         if (enemy)
             enemy->render(frame);
+    
+    if (_boss)
+        _boss->render(frame);
 
     for (auto &proj : _projectiles)
         if (proj)
@@ -196,19 +220,25 @@ bool Game::endless(int answer, float frameDelta)
 bool Game::world1(int answer, float frameDelta)
 {
     static bool initialized = false;
-    struct WaveConfig {
-        int basicCount;
-        int stationaryCount;
-        int rammerCount;
-        float spawnInterval;
+    static bool bossPhase = false;
+    static bool bossDefeated = false;
+    
+    struct EnemySpawn {
+        int type;
     };
 
-    static constexpr WaveConfig WAVES[] = {
-        {0, 3, 0, 0.95f},
-        {2, 2, 0, 0.85f},
-        {2, 2, 1, 0.75f}
+    static constexpr EnemySpawn WAVE1[] = {
+        {1}, {1}, {1}  
     };
-    static constexpr int WAVE_COUNT = sizeof(WAVES) / sizeof(WAVES[0]);
+    static constexpr EnemySpawn WAVE2[] = {
+        {0}, {1}, {0}, {1}
+    };
+    static constexpr EnemySpawn WAVE3[] = {
+        {0}, {0}, {0}, {1}, {1}, {2}
+    };
+    static constexpr const EnemySpawn* WAVES[] = {WAVE1, WAVE2, WAVE3};
+    static constexpr int WAVE_SIZES[] = {3, 4, 6};
+    static constexpr int WAVE_COUNT = 3;
     static constexpr int BASIC_COLUMNS[] = {8, 22, 36, 50, 64, 78, 92, 106};
     static constexpr int BASIC_COL_COUNT = sizeof(BASIC_COLUMNS) / sizeof(BASIC_COLUMNS[0]);
     static constexpr int STATIONARY_COLUMNS[] = {14, 40, 66, 92};
@@ -219,6 +249,7 @@ bool Game::world1(int answer, float frameDelta)
     static int currentWave = 0;
     static int spawnedInWave = 0;
     static auto last_spawn = std::chrono::steady_clock::now();
+    static auto boss_last_shoot = std::chrono::steady_clock::now();
 
     if (!initialized) {
         _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
@@ -226,9 +257,13 @@ bool Game::world1(int answer, float frameDelta)
         _player->setDy(0);
         _enemies.clear();
         _projectiles.clear();
+        _boss = nullptr;
         currentWave = 0;
         spawnedInWave = 0;
+        bossPhase = false;
+        bossDefeated = false;
         last_spawn = std::chrono::steady_clock::now();
+        boss_last_shoot = std::chrono::steady_clock::now();
         _endlessElapsedSeconds = -1;
         _world1TotalWaves = WAVE_COUNT;
         _world1CurrentWave = 1;
@@ -246,27 +281,38 @@ bool Game::world1(int answer, float frameDelta)
     }
 
     auto now = std::chrono::steady_clock::now();
-    if (currentWave < WAVE_COUNT) {
+    
+    if (!bossPhase && currentWave < WAVE_COUNT) {
         _world1CurrentWave = currentWave + 1;
-        const WaveConfig &wave = WAVES[currentWave];
-        int waveSize = wave.basicCount + wave.stationaryCount + wave.rammerCount;
+        int waveSize = WAVE_SIZES[currentWave];
         auto elapsed_spawn = std::chrono::duration<float>(now - last_spawn).count();
 
-        if (spawnedInWave < waveSize && elapsed_spawn >= wave.spawnInterval) {
-            if (spawnedInWave < wave.basicCount) {
-                int laneIndex = (spawnedInWave + currentWave * 2) % BASIC_COL_COUNT;
-                float spawnX = static_cast<float>(BASIC_COLUMNS[laneIndex]);
+        if (spawnedInWave < waveSize && elapsed_spawn >= SPAWN_INTERVAL) {
+            const EnemySpawn &spawn = WAVES[currentWave][spawnedInWave];
+            float spawnX = 0.0f;
+            
+            if (spawn.type == 0) {  
+                int basicCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 0) basicCount++;
+                int laneIndex = (basicCount + currentWave * 2) % BASIC_COL_COUNT;
+                spawnX = static_cast<float>(BASIC_COLUMNS[laneIndex]);
                 _enemies.push_back(std::make_unique<AEnemy>(spawnX, TOP_ROW + 1, 'V', 1));
             }
-            else if (spawnedInWave < wave.basicCount + wave.stationaryCount) {
-                int stationaryIndex = (spawnedInWave - wave.basicCount + currentWave) % STATIONARY_COL_COUNT;
-                float spawnX = static_cast<float>(STATIONARY_COLUMNS[stationaryIndex]);
+            else if (spawn.type == 1) {  
+                int stationaryCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 1) stationaryCount++;
+                int stationaryIndex = (stationaryCount + currentWave) % STATIONARY_COL_COUNT;
+                spawnX = static_cast<float>(STATIONARY_COLUMNS[stationaryIndex]);
                 _enemies.push_back(std::make_unique<StationaryEnemy>(spawnX, TOP_ROW + 1));
             }
-            else {
-                int rammerOffset = wave.basicCount + wave.stationaryCount;
-                int rammerIndex = (spawnedInWave - rammerOffset + currentWave) % RAMMER_COL_COUNT;
-                float spawnX = static_cast<float>(RAMMER_COLUMNS[rammerIndex]);
+            else if (spawn.type == 2) {  
+                int rammerCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 2) rammerCount++;
+                int rammerIndex = (rammerCount + currentWave) % RAMMER_COL_COUNT;
+                spawnX = static_cast<float>(RAMMER_COLUMNS[rammerIndex]);
                 _enemies.push_back(std::make_unique<RammerEnemy>(spawnX, TOP_ROW + 1));
             }
 
@@ -284,6 +330,31 @@ bool Game::world1(int answer, float frameDelta)
                 _world1CurrentWave = WAVE_COUNT;
         }
     }
+    
+    // Boss phase
+    if (currentWave >= WAVE_COUNT && !bossPhase && _enemies.empty()) {
+        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 10);  // 10 HP for World 1
+        bossPhase = true;
+        _world1CurrentWave = WAVE_COUNT + 1;  // Indicate boss phase
+        boss_last_shoot = std::chrono::steady_clock::now();
+    }
+    
+    if (bossPhase && _boss) {
+        _boss->update(frameDelta, *this);
+        
+        // Boss shoots every 1.2s
+        auto boss_shoot_elapsed = std::chrono::duration<float>(now - boss_last_shoot).count();
+        if (boss_shoot_elapsed >= 1.2f) {
+            spawnProjectile(_boss->getShootX(), _boss->getShootY(), 0.0f, 20.0f, 2, Team::Enemy);
+            boss_last_shoot = now;
+        }
+        
+        // Remove boss if HP <= 0
+        if (_boss->getHP() <= 0) {
+            _boss = nullptr;
+            bossDefeated = true;
+        }
+    }
 
     updateEntities(frameDelta);
     checkCollisions();
@@ -291,7 +362,7 @@ bool Game::world1(int answer, float frameDelta)
     if (_player && !_player->getIsAlive())
         return true;
 
-    if (currentWave >= WAVE_COUNT && _enemies.empty() && _projectiles.empty())
+    if (bossDefeated && _boss == nullptr && _projectiles.empty())
         return true;
 
     return false;
@@ -300,19 +371,25 @@ bool Game::world1(int answer, float frameDelta)
 bool Game::world2(int answer, float frameDelta)
 {
     static bool initialized = false;
-    struct WaveConfig {
-        int basicCount;
-        int stationaryCount;
-        int rammerCount;
-        float spawnInterval;
+    static bool bossPhase = false;
+    static bool bossDefeated = false;
+    
+    struct EnemySpawn {
+        int type;  
     };
 
-    static constexpr WaveConfig WAVES[] = {
-        {6, 0, 0, 0.95f},
-        {4, 2, 1, 0.85f},
-        {3, 3, 2, 0.75f}
+    static constexpr EnemySpawn WAVE1[] = {
+        {0}, {0}, {0}, {0}, {0}, {0}  
     };
-    static constexpr int WAVE_COUNT = sizeof(WAVES) / sizeof(WAVES[0]);
+    static constexpr EnemySpawn WAVE2[] = {
+        {0}, {0}, {0}, {0}, {1}, {1}, {2}  
+    };
+    static constexpr EnemySpawn WAVE3[] = {
+        {0}, {1}, {0}, {1}, {2}, {0}, {1}, {2}  
+    };
+    static constexpr const EnemySpawn* WAVES[] = {WAVE1, WAVE2, WAVE3};
+    static constexpr int WAVE_SIZES[] = {6, 7, 8};
+    static constexpr int WAVE_COUNT = 3;
     static constexpr int BASIC_COLUMNS[] = {8, 22, 36, 50, 64, 78, 92, 106};
     static constexpr int BASIC_COL_COUNT = sizeof(BASIC_COLUMNS) / sizeof(BASIC_COLUMNS[0]);
     static constexpr int STATIONARY_COLUMNS[] = {14, 40, 66, 92};
@@ -323,6 +400,7 @@ bool Game::world2(int answer, float frameDelta)
     static int currentWave = 0;
     static int spawnedInWave = 0;
     static auto last_spawn = std::chrono::steady_clock::now();
+    static auto boss_last_shoot = std::chrono::steady_clock::now();
 
     if (!initialized) {
         _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
@@ -330,9 +408,13 @@ bool Game::world2(int answer, float frameDelta)
         _player->setDy(0);
         _enemies.clear();
         _projectiles.clear();
+        _boss = nullptr;
         currentWave = 0;
         spawnedInWave = 0;
+        bossPhase = false;
+        bossDefeated = false;
         last_spawn = std::chrono::steady_clock::now();
+        boss_last_shoot = std::chrono::steady_clock::now();
         _endlessElapsedSeconds = -1;
         _world1TotalWaves = WAVE_COUNT;
         _world1CurrentWave = 1;
@@ -350,27 +432,38 @@ bool Game::world2(int answer, float frameDelta)
     }
 
     auto now = std::chrono::steady_clock::now();
-    if (currentWave < WAVE_COUNT) {
+    
+    if (!bossPhase && currentWave < WAVE_COUNT) {
         _world1CurrentWave = currentWave + 1;
-        const WaveConfig &wave = WAVES[currentWave];
-        int waveSize = wave.basicCount + wave.stationaryCount + wave.rammerCount;
+        int waveSize = WAVE_SIZES[currentWave];
         auto elapsed_spawn = std::chrono::duration<float>(now - last_spawn).count();
 
-        if (spawnedInWave < waveSize && elapsed_spawn >= wave.spawnInterval) {
-            if (spawnedInWave < wave.basicCount) {
-                int laneIndex = (spawnedInWave + currentWave * 2) % BASIC_COL_COUNT;
-                float spawnX = static_cast<float>(BASIC_COLUMNS[laneIndex]);
+        if (spawnedInWave < waveSize && elapsed_spawn >= SPAWN_INTERVAL) {
+            const EnemySpawn &spawn = WAVES[currentWave][spawnedInWave];
+            float spawnX = 0.0f;
+            
+            if (spawn.type == 0) {  
+                int basicCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 0) basicCount++;
+                int laneIndex = (basicCount + currentWave * 2) % BASIC_COL_COUNT;
+                spawnX = static_cast<float>(BASIC_COLUMNS[laneIndex]);
                 _enemies.push_back(std::make_unique<AEnemy>(spawnX, TOP_ROW + 1, 'V', 1));
             }
-            else if (spawnedInWave < wave.basicCount + wave.stationaryCount) {
-                int stationaryIndex = (spawnedInWave - wave.basicCount + currentWave) % STATIONARY_COL_COUNT;
-                float spawnX = static_cast<float>(STATIONARY_COLUMNS[stationaryIndex]);
+            else if (spawn.type == 1) {  
+                int stationaryCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 1) stationaryCount++;
+                int stationaryIndex = (stationaryCount + currentWave) % STATIONARY_COL_COUNT;
+                spawnX = static_cast<float>(STATIONARY_COLUMNS[stationaryIndex]);
                 _enemies.push_back(std::make_unique<StationaryEnemy>(spawnX, TOP_ROW + 1));
             }
-            else {
-                int rammerOffset = wave.basicCount + wave.stationaryCount;
-                int rammerIndex = (spawnedInWave - rammerOffset + currentWave) % RAMMER_COL_COUNT;
-                float spawnX = static_cast<float>(RAMMER_COLUMNS[rammerIndex]);
+            else if (spawn.type == 2) {  
+                int rammerCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 2) rammerCount++;
+                int rammerIndex = (rammerCount + currentWave) % RAMMER_COL_COUNT;
+                spawnX = static_cast<float>(RAMMER_COLUMNS[rammerIndex]);
                 _enemies.push_back(std::make_unique<RammerEnemy>(spawnX, TOP_ROW + 1));
             }
 
@@ -388,6 +481,31 @@ bool Game::world2(int answer, float frameDelta)
                 _world1CurrentWave = WAVE_COUNT;
         }
     }
+    
+    // Boss phase
+    if (currentWave >= WAVE_COUNT && !bossPhase && _enemies.empty()) {
+        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 20);  // 20 HP for World 2
+        bossPhase = true;
+        _world1CurrentWave = WAVE_COUNT + 1;
+        boss_last_shoot = std::chrono::steady_clock::now();
+    }
+    
+    if (bossPhase && _boss) {
+        _boss->update(frameDelta, *this);
+        
+        // Boss shoots every 1.2s
+        auto boss_shoot_elapsed = std::chrono::duration<float>(now - boss_last_shoot).count();
+        if (boss_shoot_elapsed >= 1.2f) {
+            spawnProjectile(_boss->getShootX(), _boss->getShootY(), 0.0f, 20.0f, 2, Team::Enemy);
+            boss_last_shoot = now;
+        }
+        
+        // Remove boss if HP <= 0
+        if (_boss->getHP() <= 0) {
+            _boss = nullptr;
+            bossDefeated = true;
+        }
+    }
 
     updateEntities(frameDelta);
     checkCollisions();
@@ -395,7 +513,7 @@ bool Game::world2(int answer, float frameDelta)
     if (_player && !_player->getIsAlive())
         return true;
 
-    if (currentWave >= WAVE_COUNT && _enemies.empty() && _projectiles.empty())
+    if (bossDefeated && _boss == nullptr && _projectiles.empty())
         return true;
 
     return false;
@@ -404,19 +522,25 @@ bool Game::world2(int answer, float frameDelta)
 bool Game::world3(int answer, float frameDelta)
 {
     static bool initialized = false;
-    struct WaveConfig {
-        int basicCount;
-        int stationaryCount;
-        int rammerCount;
-        float spawnInterval;
+    static bool bossPhase = false;
+    static bool bossDefeated = false;
+    
+    struct EnemySpawn {
+        int type;  
     };
 
-    static constexpr WaveConfig WAVES[] = {
-        {3, 3, 1, 0.95f},
-        {3, 4, 2, 0.85f},
-        {4, 4, 3, 0.75f}
+    static constexpr EnemySpawn WAVE1[] = {
+        {1}, {1}, {1}, {0}, {0}, {0}, {2}  
     };
-    static constexpr int WAVE_COUNT = sizeof(WAVES) / sizeof(WAVES[0]);
+    static constexpr EnemySpawn WAVE2[] = {
+        {2}, {0}, {1}, {0}, {2}, {1}, {0}, {1}, {2}  
+    };
+    static constexpr EnemySpawn WAVE3[] = {
+        {0}, {1}, {2}, {0}, {1}, {2}, {0}, {1}, {2}, {0}, {1}  
+    };
+    static constexpr const EnemySpawn* WAVES[] = {WAVE1, WAVE2, WAVE3};
+    static constexpr int WAVE_SIZES[] = {7, 9, 11};
+    static constexpr int WAVE_COUNT = 3;
     static constexpr int BASIC_COLUMNS[] = {8, 22, 36, 50, 64, 78, 92, 106};
     static constexpr int BASIC_COL_COUNT = sizeof(BASIC_COLUMNS) / sizeof(BASIC_COLUMNS[0]);
     static constexpr int STATIONARY_COLUMNS[] = {14, 40, 66, 92};
@@ -427,6 +551,7 @@ bool Game::world3(int answer, float frameDelta)
     static int currentWave = 0;
     static int spawnedInWave = 0;
     static auto last_spawn = std::chrono::steady_clock::now();
+    static auto boss_last_shoot = std::chrono::steady_clock::now();
 
     if (!initialized) {
         _player = std::make_unique<Player>(MIN_COLS / 2 - 2, 30);
@@ -434,9 +559,13 @@ bool Game::world3(int answer, float frameDelta)
         _player->setDy(0);
         _enemies.clear();
         _projectiles.clear();
+        _boss = nullptr;
         currentWave = 0;
         spawnedInWave = 0;
+        bossPhase = false;
+        bossDefeated = false;
         last_spawn = std::chrono::steady_clock::now();
+        boss_last_shoot = std::chrono::steady_clock::now();
         _endlessElapsedSeconds = -1;
         _world1TotalWaves = WAVE_COUNT;
         _world1CurrentWave = 1;
@@ -454,27 +583,38 @@ bool Game::world3(int answer, float frameDelta)
     }
 
     auto now = std::chrono::steady_clock::now();
-    if (currentWave < WAVE_COUNT) {
+    
+    if (!bossPhase && currentWave < WAVE_COUNT) {
         _world1CurrentWave = currentWave + 1;
-        const WaveConfig &wave = WAVES[currentWave];
-        int waveSize = wave.basicCount + wave.stationaryCount + wave.rammerCount;
+        int waveSize = WAVE_SIZES[currentWave];
         auto elapsed_spawn = std::chrono::duration<float>(now - last_spawn).count();
 
-        if (spawnedInWave < waveSize && elapsed_spawn >= wave.spawnInterval) {
-            if (spawnedInWave < wave.basicCount) {
-                int laneIndex = (spawnedInWave + currentWave * 2) % BASIC_COL_COUNT;
-                float spawnX = static_cast<float>(BASIC_COLUMNS[laneIndex]);
+        if (spawnedInWave < waveSize && elapsed_spawn >= SPAWN_INTERVAL) {
+            const EnemySpawn &spawn = WAVES[currentWave][spawnedInWave];
+            float spawnX = 0.0f;
+            
+            if (spawn.type == 0) {  
+                int basicCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 0) basicCount++;
+                int laneIndex = (basicCount + currentWave * 2) % BASIC_COL_COUNT;
+                spawnX = static_cast<float>(BASIC_COLUMNS[laneIndex]);
                 _enemies.push_back(std::make_unique<AEnemy>(spawnX, TOP_ROW + 1, 'V', 1));
             }
-            else if (spawnedInWave < wave.basicCount + wave.stationaryCount) {
-                int stationaryIndex = (spawnedInWave - wave.basicCount + currentWave) % STATIONARY_COL_COUNT;
-                float spawnX = static_cast<float>(STATIONARY_COLUMNS[stationaryIndex]);
+            else if (spawn.type == 1) {  
+                int stationaryCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 1) stationaryCount++;
+                int stationaryIndex = (stationaryCount + currentWave) % STATIONARY_COL_COUNT;
+                spawnX = static_cast<float>(STATIONARY_COLUMNS[stationaryIndex]);
                 _enemies.push_back(std::make_unique<StationaryEnemy>(spawnX, TOP_ROW + 1));
             }
-            else {
-                int rammerOffset = wave.basicCount + wave.stationaryCount;
-                int rammerIndex = (spawnedInWave - rammerOffset + currentWave) % RAMMER_COL_COUNT;
-                float spawnX = static_cast<float>(RAMMER_COLUMNS[rammerIndex]);
+            else if (spawn.type == 2) {  
+                int rammerCount = 0;
+                for (int i = 0; i < spawnedInWave; i++)
+                    if (WAVES[currentWave][i].type == 2) rammerCount++;
+                int rammerIndex = (rammerCount + currentWave) % RAMMER_COL_COUNT;
+                spawnX = static_cast<float>(RAMMER_COLUMNS[rammerIndex]);
                 _enemies.push_back(std::make_unique<RammerEnemy>(spawnX, TOP_ROW + 1));
             }
 
@@ -492,6 +632,31 @@ bool Game::world3(int answer, float frameDelta)
                 _world1CurrentWave = WAVE_COUNT;
         }
     }
+    
+    // Boss phase
+    if (currentWave >= WAVE_COUNT && !bossPhase && _enemies.empty()) {
+        _boss = std::make_unique<Boss>(MIN_COLS / 2, TOP_ROW + 5, 30);  // 30 HP for World 3
+        bossPhase = true;
+        _world1CurrentWave = WAVE_COUNT + 1;
+        boss_last_shoot = std::chrono::steady_clock::now();
+    }
+    
+    if (bossPhase && _boss) {
+        _boss->update(frameDelta, *this);
+        
+        // Boss shoots every 1.2s
+        auto boss_shoot_elapsed = std::chrono::duration<float>(now - boss_last_shoot).count();
+        if (boss_shoot_elapsed >= 1.2f) {
+            spawnProjectile(_boss->getShootX(), _boss->getShootY(), 0.0f, 20.0f, 2, Team::Enemy);
+            boss_last_shoot = now;
+        }
+        
+        // Remove boss if HP <= 0
+        if (_boss->getHP() <= 0) {
+            _boss = nullptr;
+            bossDefeated = true;
+        }
+    }
 
     updateEntities(frameDelta);
     checkCollisions();
@@ -499,7 +664,7 @@ bool Game::world3(int answer, float frameDelta)
     if (_player && !_player->getIsAlive())
         return true;
 
-    if (currentWave >= WAVE_COUNT && _enemies.empty() && _projectiles.empty())
+    if (bossDefeated && _boss == nullptr && _projectiles.empty())
         return true;
 
     return false;

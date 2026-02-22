@@ -26,7 +26,8 @@ void AGameEntity::render(WINDOW *win) const {
         }
 	}
 	else {
-		for (int i = 0; i < 3; i++) {
+		for (int i = 0; i < 7; i++) {
+			if (_asciiArt[i].empty()) continue;
 			int drawY = static_cast<int>(_y) + i;
 			int drawX = static_cast<int>(_x);
 			if (drawY >= 1 && drawY < getmaxy(win) - 1 && 
@@ -56,8 +57,12 @@ void AGameEntity::setY(float y) { _y = y; }
 void AGameEntity::setDx(float dx) { _dx = dx; }
 void AGameEntity::setDy(float dy) { _dy = dy; }
 
-void AGameEntity::setAsciiArt(const std::string &line0, const std::string &line1, const std::string &line2) {
+void AGameEntity::setAsciiArt(const std::string &line0, const std::string &line1, const std::string &line2, const std::string &line3, const std::string &line4, const std::string &line5, const std::string &line6) {
 	_asciiArt[0] = line0;
 	_asciiArt[1] = line1;
 	_asciiArt[2] = line2;
+	_asciiArt[3] = line3;
+	_asciiArt[4] = line4;
+	_asciiArt[5] = line5;
+	_asciiArt[6] = line6;
 }
