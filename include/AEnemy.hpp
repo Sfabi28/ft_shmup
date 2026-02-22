@@ -5,6 +5,7 @@
 class AEnemy : public AGameEntity {
 	protected:
 		int   _scoreValue;
+		int   _projectileColor;
 		float _shootTimer;
 		float _shootInterval;
 	public:

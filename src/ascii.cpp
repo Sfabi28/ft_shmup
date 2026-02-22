@@ -47,6 +47,11 @@ static const char *g_points[3] = {
     " o ",
     " o "};
 
+static const char *g_slash[3] = {
+    "   ",
+    " / ",
+    "/  "};
+
 void Game::ascii_art(WINDOW *win, int y, int x, const std::string &text, int area_width, bool center)
 {
     int spacing = 1;
@@ -64,6 +69,8 @@ void Game::ascii_art(WINDOW *win, int y, int x, const std::string &text, int are
             total_width += std::string(g_letters[c - 'a'][0]).length();
         else if (c == ':')
             total_width += std::string(g_points[0]).length();
+        else if (c == '/')
+            total_width += std::string(g_slash[0]).length();
         else
             total_width += 3;
 
@@ -94,6 +101,8 @@ void Game::ascii_art(WINDOW *win, int y, int x, const std::string &text, int are
                 segment = g_letters[c - 'a'][row];
             else if (c == ':')
                 segment = g_points[row];
+            else if (c == '/')
+                segment = g_slash[row];
 
             mvwprintw(win, start_y + row, current_x, "%s", segment);
 

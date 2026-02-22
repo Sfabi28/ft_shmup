@@ -8,8 +8,8 @@ VALGRIND = valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes 
 SRCS_DIR = ./src/
 HEADERS_DIR = ./include/
 
-SRCS =	$(addprefix $(SRCS_DIR), AEnemy.cpp AGameEntity.cpp ascii.cpp draw.cpp Game.cpp gameLoop.cpp Hitbox.cpp main.cpp Player.cpp Projectile.cpp)
-HEADERS = $(addprefix $(HEADERS_DIR), AEnemy.hpp AGameEntity.hpp Game.hpp Hitbox.hpp Player.hpp Projectile.hpp)
+SRCS =	$(addprefix $(SRCS_DIR), AEnemy.cpp AGameEntity.cpp ascii.cpp draw.cpp Game.cpp gameLoop.cpp Hitbox.cpp main.cpp Player.cpp Projectile.cpp StationaryEnemy.cpp RammerEnemy.cpp)
+HEADERS = $(addprefix $(HEADERS_DIR), AEnemy.hpp AGameEntity.hpp Game.hpp Hitbox.hpp Player.hpp Projectile.hpp StationaryEnemy.hpp RammerEnemy.hpp)
 
 all: $(NAME)
 
