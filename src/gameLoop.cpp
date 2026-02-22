@@ -914,7 +914,9 @@ void Game::game_loop(int mode, int players)
 
             erase();
             std::string endText = playerWon ? "you won" : "you lost";
-            ascii_art(stdscr, (LINES / 2) - 2, 0, endText, COLS, true);
+            std::string pointText = std::to_string(getScore()) + " points";
+            ascii_art(stdscr, (LINES / 2) - 6, 0, endText, COLS, true);
+            ascii_art(stdscr, (LINES / 2) - 2, 0, pointText, COLS, true);
             refresh();
 
             std::this_thread::sleep_for(std::chrono::seconds(3));
